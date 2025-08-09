@@ -4,8 +4,9 @@ A Google Apps Script (GAS) tool to edit the conference data URI of a Google Cale
 
 ## Features
 
-- Provides a simple web interface to specify the event and the new conference URI.
-- Updates the event's conference data using the Google Calendar API.
+- Provides a simple web interface to select a calendar and event.
+- Fetches your calendars and events dynamically using the Google Calendar API.
+- Updates the event's conference data with a new URI.
 
 ## Setup and Deployment
 
@@ -75,9 +76,8 @@ To use the web interface, you need to deploy the script.
 ## How to Use
 
 1.  **Open the Web App URL** you received after deployment.
-2.  **Fill in the form:**
-    - **Calendar ID:** This is usually `primary` for your main calendar.
-    - **Event ID:** Finding the Event ID can be tricky. Currently, you need to get it programmatically via the API or from other developer tools. Improving this is a planned future enhancement.
-    - **New Conference URI:** Enter the new link for your video meeting.
-3.  **Click "Update Conference Info"**.
-4.  A status message will appear indicating if the update was successful.
+2.  **Select a Calendar:** The application will load a list of your Google Calendars into the first dropdown menu. Select the calendar containing the event you wish to modify.
+3.  **Select an Event:** Once you select a calendar, the second dropdown will populate with a list of upcoming events from that calendar. Select the desired event.
+4.  **Enter New URI:** In the "New Conference URI" field, enter the new link for your video meeting.
+5.  **Click "Update Conference Info"**.
+6.  A status message will appear indicating if the update was successful.
