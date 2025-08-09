@@ -1,52 +1,52 @@
 /**
  * @OnlyCurrentDoc
  *
- * The above comment directs Apps Script to limit the scope of authorization,
- * although the manifest file (`appsscript.json`) is the definitive source.
+ * 上記のコメントは Apps Script に認可の範囲を限定するように指示しますが、
+ * 最終的な権限はマニフェストファイル (`appsscript.json`) によって定義されます。
  */
 
 /**
- * Serves the HTML for the web app.
- * @returns {HtmlOutput} The HTML output to be rendered.
+ * WebアプリのHTMLを提供します。
+ * @returns {HtmlOutput} レンダリングされるHTML出力。
  */
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('index.html')
-      .setTitle('gcal-conference-editor');
+      .setTitle('Googleカレンダー 会議URL編集ツール');
 }
 
 /**
- * Updates the conference data for a Google Calendar event.
- * This function is intended to be called from the client-side script.
+ * Googleカレンダーのイベントの会議情報を更新します。
+ * この関数はクライアントサイドのスクリプトから呼び出されることを想定しています。
  *
- * @param {string} calendarId The ID of the calendar.
- * @param {string} eventId The ID of the event.
- * @param {string} newUri The new URI for the video conference.
- * @returns {object} A result object with success status and a message.
+ * @param {string} calendarId カレンダーのID。
+ * @param {string} eventId イベントのID。
+ * @param {string} newUri ビデオ会議の新しいURI。
+ * @returns {object} 成功ステータスとメッセージを含む結果オブジェクト。
  */
 function updateConferenceData(calendarId, eventId, newUri) {
-  // Validate inputs
+  // 入力を検証
   if (!calendarId || !eventId || !newUri) {
     return { success: false, message: 'カレンダーID、イベントID、新しいURIは必須です。' };
   }
 
   try {
-    // 1. Get the event using the Calendar advanced service.
-    // This requires the Calendar API to be enabled in both the Apps Script project
-    // and the associated Google Cloud Platform project.
+    // 1. Calendar上級サービスを使用してイベントを取得します。
+    // これには、Apps Scriptプロジェクトと関連するGoogle Cloud Platformプロジェクトの両方で
+    // Calendar APIが有効になっている必要があります。
     const event = Calendar.Events.get(calendarId, eventId);
 
-    // 2. Check if conferenceData and entryPoints exist.
+    // 2. conferenceDataとentryPointsが存在するか確認します。
     if (!event.conferenceData || !event.conferenceData.entryPoints || event.conferenceData.entryPoints.length === 0) {
       return { success: false, message: 'このイベントには編集可能なビデオ会議情報がありません。' };
     }
 
-    // 3. Find the first 'video' entry point and update its URI.
+    // 3. 最初の 'video' エントリーポイントを見つけて、そのURIを更新します。
     let updated = false;
     for (let i = 0; i < event.conferenceData.entryPoints.length; i++) {
       if (event.conferenceData.entryPoints[i].entryPointType === 'video') {
         event.conferenceData.entryPoints[i].uri = newUri;
         updated = true;
-        break; // Stop after updating the first one.
+        break; // 最初のものを更新した後に停止します。
       }
     }
 
@@ -54,13 +54,13 @@ function updateConferenceData(calendarId, eventId, newUri) {
         return { success: false, message: '更新対象のビデオ会議情報 (entryPointType="video") が見つかりませんでした。' };
     }
 
-    // 4. Create the resource for the patch request. It should only contain the fields to be updated.
+    // 4. patchリクエストのリソースを作成します。更新するフィールドのみを含む必要があります。
     const resource = {
       conferenceData: event.conferenceData
     };
 
-    // 5. Patch the event.
-    // conferenceDataVersion: 1 is required to prevent Google Meet from auto-updating the conference.
+    // 5. イベントにパッチを適用します。
+    // conferenceDataVersion: 1 は、Google Meetが会議情報を自動更新するのを防ぐために必要です。
     Calendar.Events.patch(resource, calendarId, eventId, {
       conferenceDataVersion: 1
     });
@@ -68,7 +68,7 @@ function updateConferenceData(calendarId, eventId, newUri) {
     return { success: true, message: '会議情報を正常に更新しました。' };
 
   } catch (e) {
-    // Log the error for debugging and return a user-friendly message.
+    // デバッグ用にエラーをログに記録し、ユーザーフレンドリーなメッセージを返します。
     console.error('Error in updateConferenceData: ' + e.toString() + ' Stack: ' + e.stack);
     return { success: false, message: 'サーバーエラーが発生しました: ' + e.message };
   }
@@ -87,8 +87,8 @@ function getCalendars() {
     }));
   } catch (e) {
     console.error('Error in getCalendars: ' + e.toString());
-    // エラーをクライアントに伝達するために、オブジェクトとして返すこともできます。
-    // ここでは単純化のため、空の配列を返します。
+    // エラーをクライアントに伝達するためにオブジェクトとして返すこともできますが、
+    // ここでは単純化のため空の配列を返します。
     return [];
   }
 }
