@@ -4,14 +4,28 @@
     <base target="_top">
     <style>
       body { font-family: Arial, sans-serif; margin: 20px; }
-      form { display: flex; flex-direction: column; gap: 10px; max-width: 500px; }
+      form { display: flex; flex-direction: column; gap: 15px; max-width: 500px; }
       label { font-weight: bold; }
-      input[type="text"], input[type="url"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+      input[type="url"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 14px; }
       button { padding: 10px 15px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
       button:disabled { background-color: #aaa; cursor: not-allowed; }
       #status { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
       .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
       .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+      .loader {
+        border: 4px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 4px solid #3498db;
+        width: 16px;
+        height: 16px;
+        animation: spin 2s linear infinite;
+        display: none; /* Initially hidden */
+        margin-left: 10px;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body>
@@ -19,30 +33,114 @@
     <p>このツールは、Googleカレンダーのイベントに含まれるビデオ会議のURIを更新します。</p>
 
     <form id="update-form">
-      <label for="calendarId">Calendar ID:</label>
-      <input type="text" id="calendarId" name="calendarId" value="primary" required>
+      <div>
+        <label for="calendar-select">1. カレンダーを選択:</label>
+        <select id="calendar-select" name="calendarId" required disabled>
+          <option value="">カレンダーを読み込み中...</option>
+        </select>
+      </div>
 
-      <label for="eventId">Event ID:</label>
-      <input type="text" id="eventId" name="eventId" required>
+      <div>
+        <label for="event-select">2. イベントを選択:</label>
+        <select id="event-select" name="eventId" required disabled>
+          <option value="">カレンダーを選択してください</option>
+        </select>
+        <div id="event-loader" class="loader"></div>
+      </div>
 
-      <label for="newUri">New Conference URI:</label>
-      <input type="url" id="newUri" name="newUri" required>
+      <div>
+        <label for="newUri">3. 新しい会議のURI:</label>
+        <input type="url" id="newUri" name="newUri" required>
+      </div>
 
-      <button type="submit" id="submit-button">Update Conference Info</button>
+      <button type="submit" id="submit-button" disabled>Update Conference Info</button>
     </form>
 
     <div id="status"></div>
 
     <script>
-      document.getElementById('update-form').addEventListener('submit', function(event) {
+      const calendarSelect = document.getElementById('calendar-select');
+      const eventSelect = document.getElementById('event-select');
+      const eventLoader = document.getElementById('event-loader');
+      const form = document.getElementById('update-form');
+      const submitButton = document.getElementById('submit-button');
+      const statusDiv = document.getElementById('status');
+
+      // --- Functions to populate dropdowns ---
+      function populateSelect(selectElement, items, defaultOptionText) {
+        selectElement.innerHTML = ''; // Clear existing options
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = defaultOptionText;
+        defaultOption.disabled = true;
+        defaultOption.selected = true;
+        selectElement.appendChild(defaultOption);
+
+        items.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.id;
+          option.textContent = item.summary;
+          selectElement.appendChild(option);
+        });
+        selectElement.disabled = false;
+      }
+
+      // --- Event Listeners ---
+      window.addEventListener('load', () => {
+        google.script.run
+          .withSuccessHandler(calendars => {
+            if (calendars && calendars.length > 0) {
+              populateSelect(calendarSelect, calendars, 'カレンダーを選択');
+            } else {
+              calendarSelect.innerHTML = '<option value="">利用可能なカレンダーがありません</option>';
+            }
+          })
+          .withFailureHandler(err => {
+             calendarSelect.innerHTML = `<option value="">カレンダーの読み込みに失敗しました: ${err.message}</option>`;
+          })
+          .getCalendars();
+      });
+
+      calendarSelect.addEventListener('change', () => {
+        const calendarId = calendarSelect.value;
+        if (!calendarId) return;
+
+        eventSelect.disabled = true;
+        eventSelect.innerHTML = '<option value="">イベントを読み込み中...</option>';
+        eventLoader.style.display = 'inline-block';
+        submitButton.disabled = true;
+
+        google.script.run
+          .withSuccessHandler(events => {
+            eventLoader.style.display = 'none';
+            if (events && events.length > 0) {
+              populateSelect(eventSelect, events, 'イベントを選択');
+            } else {
+              eventSelect.innerHTML = '<option value="">イベントが見つかりません</option>';
+            }
+          })
+          .withFailureHandler(err => {
+            eventLoader.style.display = 'none';
+            eventSelect.innerHTML = `<option value="">イベントの読み込みに失敗しました: ${err.message}</option>`;
+          })
+          .getEvents(calendarId);
+      });
+
+      eventSelect.addEventListener('change', () => {
+        // Enable submit button only if both calendar and event are selected
+        if (calendarSelect.value && eventSelect.value) {
+          submitButton.disabled = false;
+        } else {
+          submitButton.disabled = true;
+        }
+      });
+
+
+      form.addEventListener('submit', function(event) {
         event.preventDefault();
 
-        const form = event.target;
-        const button = document.getElementById('submit-button');
-        const statusDiv = document.getElementById('status');
-
         // Disable button and show loading status
-        button.disabled = true;
+        submitButton.disabled = true;
         statusDiv.style.display = 'block';
         statusDiv.className = '';
         statusDiv.textContent = '更新中...';
@@ -53,7 +151,7 @@
 
         google.script.run
           .withSuccessHandler(function(response) {
-            button.disabled = false;
+            submitButton.disabled = false; // Re-enable on success
             statusDiv.textContent = response.message;
             if (response.success) {
               statusDiv.className = 'success';
@@ -62,7 +160,7 @@
             }
           })
           .withFailureHandler(function(error) {
-            button.disabled = false;
+            submitButton.disabled = false; // Re-enable on failure
             statusDiv.textContent = 'スクリプトの実行に失敗しました: ' + error.message;
             statusDiv.className = 'error';
           })

@@ -73,3 +73,61 @@ function updateConferenceData(calendarId, eventId, newUri) {
     return { success: false, message: 'サーバーエラーが発生しました: ' + e.message };
   }
 }
+
+/**
+ * ユーザーのカレンダーリストを取得します。
+ * @returns {Array<Object>} カレンダーのリスト。各オブジェクトは {id: string, summary: string} を含みます。
+ */
+function getCalendars() {
+  try {
+    const calendars = Calendar.CalendarList.list({ showHidden: false });
+    return calendars.items.map(calendar => ({
+      id: calendar.id,
+      summary: calendar.summary
+    }));
+  } catch (e) {
+    console.error('Error in getCalendars: ' + e.toString());
+    // エラーをクライアントに伝達するために、オブジェクトとして返すこともできます。
+    // ここでは単純化のため、空の配列を返します。
+    return [];
+  }
+}
+
+/**
+ * 特定のカレンダーから今後のイベントを取得します。
+ * @param {string} calendarId 取得元のカレンダーID。
+ * @returns {Array<Object>} イベントのリスト。各オブジェクトは {id: string, summary: string} を含みます。
+ */
+function getEvents(calendarId) {
+  if (!calendarId) {
+    return [];
+  }
+  try {
+    const now = new Date();
+    // 取得するイベントの期間を制限（例：今後30日間）
+    const timeMin = now.toISOString();
+    const timeMax = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const events = Calendar.Events.list(calendarId, {
+      timeMin: timeMin,
+      timeMax: timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 50 // 取得するイベントの最大数
+    });
+
+    return events.items
+      .filter(event => event.status !== 'cancelled' && event.start.dateTime) // 終日イベントやキャンセルされたイベントを除外
+      .map(event => {
+        // イベントの開始日時をフォーマットしてサマリーに追加
+        const startTime = new Date(event.start.dateTime).toLocaleString('ja-JP');
+        return {
+          id: event.id,
+          summary: `${event.summary} (${startTime})`
+        };
+      });
+  } catch (e) {
+    console.error(`Error in getEvents for calendar ${calendarId}: ` + e.toString());
+    return [];
+  }
+}
