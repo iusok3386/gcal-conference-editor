@@ -1,83 +1,83 @@
 # gcal-conference-editor
 
-A Google Apps Script (GAS) tool to edit the conference data URI of a Google Calendar event. This is useful for changing video conference links (like Zoom, Teams, etc.) that are otherwise not editable through the standard Google Calendar interface.
+Googleカレンダーのイベントの会議データURIを編集するためのGoogle Apps Script (GAS) ツールです。これにより、標準のGoogleカレンダーインターフェースでは編集できないビデオ会議リンク（Zoom、Teamsなど）を変更するのに役立ちます。
 
-## Features
+## 主な機能
 
-- Provides a simple web interface to select a calendar and event.
-- Fetches your calendars and events dynamically using the Google Calendar API.
-- Updates the event's conference data with a new URI.
+- カレンダーとイベントを選択するためのシンプルなWebインターフェースを提供します。
+- Google Calendar APIを使用して、カレンダーとイベントを動的に取得します。
+- イベントの会議データを新しいURIで更新します。
 
-## Setup and Deployment
+## セットアップとデプロイ
 
-This project uses `clasp`, the command-line tool for Google Apps Script, and Node.js for setup.
+このプロジェクトでは、Google Apps Scriptのコマンドラインツールである`clasp`と、セットアップのためにNode.jsを使用します。
 
-### 1. Initial Setup
+### 1. 初期セットアップ
 
-You need to have [Node.js](https://nodejs.org/) and `npm` installed.
+[Node.js](https://nodejs.org/)と`npm`がインストールされている必要があります。
 
-1.  **Clone this repository:**
+1.  **このリポジトリをクローンします:**
     ```bash
     git clone https://github.com/your-username/gcal-conference-editor.git
     cd gcal-conference-editor
     ```
 
-2.  **Install Dependencies:**
-    This will install `clasp` and other necessary packages locally.
+2.  **依存関係をインストールします:**
+    これにより、`clasp`やその他必要なパッケージがローカルにインストールされます。
     ```bash
     npm install
     ```
 
-3.  **Login to Google:**
-    Authorize `clasp` to access your Google account.
+3.  **Googleにログインします:**
+    `clasp`がGoogleアカウントにアクセスすることを承認します。
     ```bash
     npx clasp login
     ```
 
-4.  **Create and Link Apps Script Project:**
-    First, create a new, empty standalone script project at [script.google.com](https://script.google.com/home/projects/create).
-    After creating it, run the setup script below. It will ask for the **Script ID**, which you can find in the Project Settings (⚙️ icon) of your new Apps Script project.
+4.  **Apps Scriptプロジェクトを作成してリンクします:**
+    まず、[script.google.com](https://script.google.com/home/projects/create)で新しい空のスタンドアロンスクリプトプロジェクトを作成します。
+    作成後、以下のセットアップスクリプトを実行します。新しいApps Scriptプロジェクトのプロジェクト設定（⚙️アイコン）にある**スクリプトID**の入力を求められます。
     ```bash
     npm run setup
     ```
 
-5.  **Push the files:**
-    This command will upload the files from your `src` directory (`Code.gs`, `index.html`, `appsscript.json`) to your Apps Script project.
+5.  **ファイルをプッシュします:**
+    このコマンドは、`src`ディレクトリのファイル（`Code.gs`、`index.html`、`appsscript.json`）をApps Scriptプロジェクトにアップロードします。
     ```bash
     npx clasp push
     ```
 
-### 2. Deploy as a Web App
+### 2. Webアプリとしてデプロイする
 
-To use the web interface, you need to deploy the script.
+Webインターフェースを使用するには、スクリプトをデプロイする必要があります。
 
-1.  **Open the Apps Script Project:**
-    Run the following command to open your project in the Apps Script online editor.
+1.  **Apps Scriptプロジェクトを開きます:**
+    次のコマンドを実行して、Apps Scriptのオンラインエディタでプロジェクトを開きます。
     ```bash
     npx clasp open-script
     ```
 
-2.  **Create a Deployment:**
-    In the Apps Script editor:
-    - Click **Deploy** > **New deployment**.
-    - Next to "Select type", click the gear icon (⚙️) and choose **Web app**.
-    - In the configuration:
-        - **Description:** (Optional) Add a description like "Conference URI Editor".
-        - **Execute as:** Select **User accessing the web app**.
-        - **Who has access:** Select who can use the app. For personal use, **Only myself** is safest.
-    - Click **Deploy**.
+2.  **デプロイを作成します:**
+    Apps Scriptエディタで：
+    - **デプロイ** > **新しいデプロイ** をクリックします。
+    - 「種類の選択」の横にある歯車アイコン（⚙️）をクリックし、**ウェブアプリ**を選択します。
+    - 設定：
+        - **説明:** （任意）「会議URI編集ツール」などの説明を追加します。
+        - **次のユーザーとして実行:** **ウェブアプリにアクセスしているユーザー** を選択します。
+        - **アクセスできるユーザー:** アプリを使用できるユーザーを選択します。個人使用の場合は、**自分のみ**が最も安全です。
+    - **デプロイ**をクリックします。
 
-3.  **Authorize Permissions:**
-    The first time you deploy, you will be prompted to authorize the script's permissions. Click **Authorize access** and follow the on-screen instructions. You may see a "Google hasn't verified this app" screen; click "Advanced" and then "Go to [your project name] (unsafe)" to proceed.
+3.  **権限を承認します:**
+    初めてデプロイする際に、スクリプトの権限を承認するよう求められます。**アクセスを承認**をクリックし、画面の指示に従います。「このアプリはGoogleで確認されていません」という画面が表示された場合は、「詳細」をクリックし、「[プロジェクト名]に移動（安全でないページ）」をクリックして続行します。
 
-4.  **Get the Web App URL:**
-    After deployment, you will be given a **Web app URL**. This is the link to your finished application.
+4.  **WebアプリのURLを取得します:**
+    デプロイ後、**ウェブアプリのURL**が提供されます。これが完成したアプリケーションへのリンクです。
 
-## How to Use
+## 使用方法
 
-1.  **Open the Web App URL** you received after deployment.
-2.  **Select a Calendar:** The application will load a list of your Google Calendars into the first dropdown menu. Select the calendar containing the event you wish to modify.
-3.  **Select an Event:** Once you select a calendar, the second dropdown will populate with a list of upcoming events from that calendar. Select the desired event.
-4.  **Enter New URI:** In the "New Conference URI" field, enter the new link for your video meeting.
-5.  **Click "Update Conference Info"**.
-6.  A status message will appear indicating if the update was successful.
+1.  デプロイ後に取得した**WebアプリのURL**を開きます。
+2.  **カレンダーを選択:** アプリケーションは、最初のドロップダウンメニューにGoogleカレンダーのリストを読み込みます。変更したいイベントが含まれるカレンダーを選択します。
+3.  **イベントを選択:** カレンダーを選択すると、2番目のドロップダウンにそのカレンダーの今後のイベントのリストが表示されます。目的のイベントを選択します。
+4.  **新しいURIを入力:** 「新しい会議のURI」フィールドに、ビデオ会議の新しいリンクを入力します。
+5.  **「会議情報を更新」をクリックします**。
+6.  更新が成功したかどうかを示すステータスメッセージが表示されます。
