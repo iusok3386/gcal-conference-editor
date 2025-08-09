@@ -1,2 +1,8 @@
 # Ignore clasp credentials
 .clasprc.json
+
+# Ignore environment-specific clasp config
+.clasp.json
+
+# Ignore node dependencies
+node_modules/

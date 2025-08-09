@@ -9,62 +9,55 @@ A Google Apps Script (GAS) tool to edit the conference data URI of a Google Cale
 
 ## Setup and Deployment
 
-This project uses `clasp`, the command-line tool for Google Apps Script, to manage files locally.
+This project uses `clasp`, the command-line tool for Google Apps Script, and Node.js for setup.
 
-### 1. Initial Setup (Local Environment)
+### 1. Initial Setup
 
 You need to have [Node.js](https://nodejs.org/) and `npm` installed.
 
-1.  **Install `clasp`:**
-    ```bash
-    npm install -g @google/clasp
-    ```
-
-2.  **Login to Google:**
-    Authorize `clasp` to access your Google account. This will open a browser window.
-    ```bash
-    clasp login
-    ```
-
-3.  **Clone this repository and create an Apps Script Project:**
-    Get the code, navigate into the directory, and then use `clasp` to create a corresponding project on Google Drive.
+1.  **Clone this repository:**
     ```bash
     git clone https://github.com/your-username/gcal-conference-editor.git
     cd gcal-conference-editor
-    clasp create --type standalone --title "gcal-conference-editor" --rootDir .
     ```
 
-4.  **Push the files:**
+2.  **Install Dependencies:**
+    This will install `clasp` and other necessary packages locally.
+    ```bash
+    npm install
+    ```
+
+3.  **Login to Google:**
+    Authorize `clasp` to access your Google account.
+    ```bash
+    npx clasp login
+    ```
+
+4.  **Create and Link Apps Script Project:**
+    First, create a new, empty standalone script project at [script.google.com](https://script.google.com/home/projects/create).
+    After creating it, run the setup script below. It will ask for the **Script ID**, which you can find in the Project Settings (⚙️ icon) of your new Apps Script project.
+    ```bash
+    npm run setup
+    ```
+
+5.  **Push the files:**
     Upload the local `Code.gs`, `index.html`, and `appsscript.json` to your new Apps Script project.
     ```bash
-    clasp push
+    npx clasp push
     ```
 
-### 2. Enable Google Calendar API
-
-For the script to work, you **must** enable the Google Calendar API in the associated Google Cloud project.
-
-1.  **Open the Apps Script Project:**
-    Run `clasp open`. This will open your project in the Apps Script online editor.
-
-2.  **Find the GCP Project Number:**
-    In the Apps Script editor, go to **Project Settings** (⚙️ icon on the left). Under "Google Cloud Platform (GCP) Project", copy the **Project Number**.
-
-3.  **Open Google Cloud Console:**
-    Go to the [Google Cloud Console API Library](https://console.cloud.google.com/apis/library).
-
-4.  **Select the Correct Project:**
-    At the top of the page, click the project dropdown. A search box will appear. Paste the project number you copied to find and select the correct GCP project. It will likely be named `Apps Script...` or similar.
-
-5.  **Enable the Calendar API:**
-    In the API Library, search for "Google Calendar API", select it, and click the **Enable** button.
-
-### 3. Deploy as a Web App
+### 2. Deploy as a Web App
 
 To use the web interface, you need to deploy the script.
 
-1.  **Create a Deployment:**
-    In the Apps Script editor (opened via `clasp open`):
+1.  **Open the Apps Script Project:**
+    Run the following command to open your project in the Apps Script online editor.
+    ```bash
+    npx clasp open-script
+    ```
+
+2.  **Create a Deployment:**
+    In the Apps Script editor:
     - Click **Deploy** > **New deployment**.
     - Next to "Select type", click the gear icon (⚙️) and choose **Web app**.
     - In the configuration:
@@ -73,23 +66,18 @@ To use the web interface, you need to deploy the script.
         - **Who has access:** Select who can use the app. For personal use, **Only myself** is safest.
     - Click **Deploy**.
 
-2.  **Authorize Permissions:**
-    The first time you deploy, you will be prompted to authorize the script's permissions (e.g., access your calendar). Click **Authorize access** and follow the on-screen instructions. You may see a "Google hasn't verified this app" screen; click "Advanced" and then "Go to [your project name] (unsafe)" to proceed.
+3.  **Authorize Permissions:**
+    The first time you deploy, you will be prompted to authorize the script's permissions. Click **Authorize access** and follow the on-screen instructions. You may see a "Google hasn't verified this app" screen; click "Advanced" and then "Go to [your project name] (unsafe)" to proceed.
 
-3.  **Get the Web App URL:**
-    After deployment, you will be given a **Web app URL**. This is the link to your finished application. Copy and save it.
+4.  **Get the Web App URL:**
+    After deployment, you will be given a **Web app URL**. This is the link to your finished application.
 
 ## How to Use
 
 1.  **Open the Web App URL** you received after deployment.
-2.  **Find the Event ID:**
-    - Open Google Calendar.
-    - Click on the event you want to edit.
-    - In the "More options" (three dots) menu, click "Troubleshooting info".
-    - Copy the `Event ID` from the information that appears. It will look something like `abc123def456@google.com`.
-3.  **Fill in the form on your web app:**
+2.  **Fill in the form:**
     - **Calendar ID:** This is usually `primary` for your main calendar.
-    - **Event ID:** Paste the ID you just copied.
-    - **New Conference URI:** Enter the new link for your video meeting (e.g., a Zoom or Teams link).
-4.  **Click "Update Conference Info"**.
-5.  A status message will appear indicating if the update was successful.
+    - **Event ID:** Finding the Event ID can be tricky. Currently, you need to get it programmatically via the API or from other developer tools. Improving this is a planned future enhancement.
+    - **New Conference URI:** Enter the new link for your video meeting.
+3.  **Click "Update Conference Info"**.
+4.  A status message will appear indicating if the update was successful.
