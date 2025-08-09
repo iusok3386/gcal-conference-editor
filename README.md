@@ -41,7 +41,7 @@ You need to have [Node.js](https://nodejs.org/) and `npm` installed.
     ```
 
 5.  **Push the files:**
-    Upload the local `Code.gs`, `index.html`, and `appsscript.json` to your new Apps Script project.
+    This command will upload the files from your `src` directory (`Code.gs`, `index.html`, `appsscript.json`) to your Apps Script project.
     ```bash
     npx clasp push
     ```

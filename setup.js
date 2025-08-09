@@ -1,7 +1,6 @@
 const fs = require('fs');
 const prompts = require('prompts');
 
-// .clasp.jsonが既に存在する場合は何もしない
 if (fs.existsSync('.clasp.json')) {
   console.log('✅ .clasp.json already exists. Nothing to do.');
   return;
@@ -13,12 +12,6 @@ const questions = [
     name: 'scriptId',
     message: 'Please enter your Google Apps Script ID:',
     validate: id => id ? true : 'Script ID cannot be empty.'
-  },
-  {
-    type: 'text',
-    name: 'rootDir',
-    message: 'Enter the root directory for your source files:',
-    initial: '.' // Default to current directory
   }
 ];
 
@@ -28,13 +21,15 @@ const questions = [
 
   const response = await prompts(questions);
 
-  if (response.scriptId && response.rootDir) {
+  if (response.scriptId) {
     const claspConfig = {
       scriptId: response.scriptId,
-      rootDir: response.rootDir
+      rootDir: "./src", // Point to the src directory
+      filePushOrder: [] // Add other sensible defaults
     };
     fs.writeFileSync('.clasp.json', JSON.stringify(claspConfig, null, 2));
     console.log('✨ Successfully created .clasp.json!');
+    console.log('Please run "npx clasp push" to upload your files.');
   } else {
     console.log('Setup cancelled.');
   }
