@@ -2,7 +2,7 @@ const fs = require('fs');
 const prompts = require('prompts');
 
 if (fs.existsSync('.clasp.json')) {
-  console.log('✅ .clasp.json already exists. Nothing to do.');
+  console.log('✅ .clasp.json は既に存在します。作業は不要です。');
   return;
 }
 
@@ -10,27 +10,27 @@ const questions = [
   {
     type: 'text',
     name: 'scriptId',
-    message: 'Please enter your Google Apps Script ID:',
-    validate: id => id ? true : 'Script ID cannot be empty.'
+    message: 'Google Apps ScriptのIDを入力してください:',
+    validate: id => id ? true : 'スクリプトIDは空にできません。'
   }
 ];
 
 (async () => {
-  console.log('🚀 Welcome! Let\'s set up your local environment.');
-  console.log('Please create a new project on script.google.com and copy its Script ID.');
+  console.log('🚀 ようこそ！ローカル環境のセットアップを開始します。');
+  console.log('script.google.com で新しいプロジェクトを作成し、そのスクリプトIDをコピーしてください。');
 
   const response = await prompts(questions);
 
   if (response.scriptId) {
     const claspConfig = {
       scriptId: response.scriptId,
-      rootDir: "./src", // Point to the src directory
-      filePushOrder: [] // Add other sensible defaults
+      rootDir: "./src", // srcディレクトリを指します
+      filePushOrder: [] // その他の適切なデフォルト値
     };
     fs.writeFileSync('.clasp.json', JSON.stringify(claspConfig, null, 2));
-    console.log('✨ Successfully created .clasp.json!');
-    console.log('Please run "npx clasp push" to upload your files.');
+    console.log('✨ .clasp.json を正常に作成しました！');
+    console.log('"npx clasp push" を実行して、ファイルをアップロードしてください。');
   } else {
-    console.log('Setup cancelled.');
+    console.log('セットアップがキャンセルされました。');
   }
 })();
