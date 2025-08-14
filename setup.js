@@ -10,21 +10,21 @@ const questions = [
   {
     type: 'text',
     name: 'scriptId',
-    message: 'Google Apps ScriptのIDを入力してください:',
-    validate: id => id ? true : 'スクリプトIDは空にできません。'
+    message: 'Google Apps Script の ID を入力してください:',
+    validate: id => id ? true : 'スクリプト ID は空にできません。'
   }
 ];
 
 (async () => {
   console.log('🚀 ようこそ！ローカル環境のセットアップを開始します。');
-  console.log('script.google.com で新しいプロジェクトを作成し、そのスクリプトIDをコピーしてください。');
+  console.log('script.google.com で新しいプロジェクトを作成し、そのスクリプト ID をコピーしてください。');
 
   const response = await prompts(questions);
 
   if (response.scriptId) {
     const claspConfig = {
       scriptId: response.scriptId,
-      rootDir: "./src", // srcディレクトリを指します
+      rootDir: "./src", // src ディレクトリを指します
       filePushOrder: [] // その他の適切なデフォルト値
     };
     fs.writeFileSync('.clasp.json', JSON.stringify(claspConfig, null, 2));

@@ -11,31 +11,31 @@
  */
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('index.html')
-      .setTitle('Googleカレンダー 会議URL編集ツール');
+      .setTitle('Google カレンダー 会議 URL 編集ツール');
 }
 
 /**
- * Googleカレンダーのイベントの会議情報を更新します。
+ * Google カレンダーのイベントの会議情報を更新します。
  * この関数はクライアントサイドのスクリプトから呼び出されることを想定しています。
  *
- * @param {string} calendarId カレンダーのID。
- * @param {string} eventId イベントのID。
- * @param {string} newUri ビデオ会議の新しいURI。
+ * @param {string} calendarId カレンダーの ID。
+ * @param {string} eventId イベントの ID。
+ * @param {string} newUri ビデオ会議の新しい URI。
  * @returns {object} 成功ステータスとメッセージを含む結果オブジェクト。
  */
 function updateConferenceData(calendarId, eventId, newUri) {
   // 入力を検証
   if (!calendarId || !eventId || !newUri) {
-    return { success: false, message: 'カレンダーID、イベントID、新しいURIは必須です。' };
+    return { success: false, message: 'カレンダー ID、イベント ID、新しい URI は必須です。' };
   }
 
   try {
-    // 1. Calendar上級サービスを使用してイベントを取得します。
-    // これには、Apps Scriptプロジェクトと関連するGoogle Cloud Platformプロジェクトの両方で
-    // Calendar APIが有効になっている必要があります。
+    // 1. Calendar 上級サービスを使用してイベントを取得します。
+    // これには、Apps Script プロジェクトと関連する Google Cloud Platform プロジェクトの両方で
+    // Calendar API が有効になっている必要があります。
     const event = Calendar.Events.get(calendarId, eventId);
 
-    // 2. conferenceDataとentryPointsが存在するか確認します。
+    // 2. conferenceData と entryPoints が存在するか確認します。
     if (!event.conferenceData || !event.conferenceData.entryPoints || event.conferenceData.entryPoints.length === 0) {
       return { success: false, message: 'このイベントには編集可能なビデオ会議情報がありません。' };
     }
@@ -54,13 +54,13 @@ function updateConferenceData(calendarId, eventId, newUri) {
         return { success: false, message: '更新対象のビデオ会議情報 (entryPointType="video") が見つかりませんでした。' };
     }
 
-    // 4. patchリクエストのリソースを作成します。更新するフィールドのみを含む必要があります。
+    // 4. patch リクエストのリソースを作成します。更新するフィールドのみを含む必要があります。
     const resource = {
       conferenceData: event.conferenceData
     };
 
     // 5. イベントにパッチを適用します。
-    // conferenceDataVersion: 1 は、Google Meetが会議情報を自動更新するのを防ぐために必要です。
+    // conferenceDataVersion: 1 は、Google Meet が会議情報を自動更新するのを防ぐために必要です。
     Calendar.Events.patch(resource, calendarId, eventId, {
       conferenceDataVersion: 1
     });
