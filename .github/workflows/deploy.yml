@@ -1,5 +1,9 @@
 name: Deploy to Google Apps Script
 
+permissions:
+  contents: read
+  deployments: write
+
 on:
   push:
     branches:
