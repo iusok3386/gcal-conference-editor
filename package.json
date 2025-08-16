@@ -3,11 +3,19 @@
   "version": "1.0.0",
   "description": "A Google Apps Script (GAS) tool to edit the conference data URI of a Google Calendar event.",
   "scripts": {
-    "setup": "node setup.js"
+    "setup": "node setup.js",
+    "build": "tsc && cp src/appsscript.json dist/appsscript.json && cp src/index.html dist/index.html",
+    "push": "clasp push",
+    "deploy": "npm run build && clasp push"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.83",
+    "typescript": "^5.4.5"
   }
 }
