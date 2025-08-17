@@ -57,6 +57,9 @@ jobs:
           URL="https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec"
           echo "url=$URL" >> $GITHUB_OUTPUT
 
+      - name: Debug Deployment Info
+        run: echo "Deployment ID is ${{ steps.deployment.outputs.id }}"
+
       - name: Update GitHub Deployment (Success)
         uses: bobheadxi/deployments@v1
         if: success()
