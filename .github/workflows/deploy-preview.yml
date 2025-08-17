@@ -42,8 +42,10 @@ jobs:
         id: deploy
         run: |
           output=$(npx clasp deploy)
-          echo "$output"
-          url=$(echo "$output" | grep -o 'https://.*' | head -n 1)
+          echo "Clasp output: $output"
+          deployment_id=$(echo "$output" | awk '{print $2}')
+          url="https://script.google.com/macros/s/${deployment_id}/exec"
+          echo "Constructed URL: $url"
           echo "url=$url" >> $GITHUB_OUTPUT
 
       - name: Comment on PR with deployment URL

@@ -42,6 +42,9 @@ jobs:
         id: deploy
         run: |
           output=$(npx clasp deploy --deploymentId ${{ secrets.PRODUCTION_DEPLOYMENT_ID }})
-          echo "$output"
-          url=$(echo "$output" | grep -o 'https://.*' | head -n 1)
+          echo "Clasp output: $output"
+          # The production URL is stable and does not change on redeploy.
+          # We construct it manually for the GitHub environments tab.
+          url="https://script.google.com/macros/s/${{ secrets.PRODUCTION_DEPLOYMENT_ID }}/exec"
+          echo "Production URL: $url"
           echo "url=$url" >> $GITHUB_OUTPUT
