@@ -22,7 +22,7 @@ jobs:
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
           environment: "preview-pr-${{ github.event.number }}"
-          status: "in_progress"
+          initial_status: "in_progress"
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout code
@@ -58,20 +58,20 @@ jobs:
 
       - name: Update deployment status (Success)
         if: success()
-        uses: chrnorm/deployment-action@v2
+        uses: chrnorm/deployment-status-action@v2
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
           environment_url: ${{ steps.deploy.outputs.url }}
-          status: "success"
+          state: "success"
 
       - name: Update deployment status (Failure)
         if: failure() || cancelled()
-        uses: chrnorm/deployment-action@v2
+        uses: chrnorm/deployment-status-action@v2
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          status: "failure"
+          state: "failure"
 
   deploy_production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
