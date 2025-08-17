@@ -1,8 +1,16 @@
 const fs = require('fs');
 const prompts = require('prompts');
 
-if (fs.existsSync('.clasp.json')) {
-  console.log('✅ .clasp.json は既に存在します。作業は不要です。');
+const TEMPLATE_PATH = '.clasp.json.template';
+const OUTPUT_PATH = '.clasp.json';
+
+if (fs.existsSync(OUTPUT_PATH)) {
+  console.log(`✅ ${OUTPUT_PATH} は既に存在します。作業は不要です。`);
+  return;
+}
+
+if (!fs.existsSync(TEMPLATE_PATH)) {
+  console.error(`❌ テンプレートファイル (${TEMPLATE_PATH}) が見つかりません。`);
   return;
 }
 
@@ -22,13 +30,10 @@ const questions = [
   const response = await prompts(questions);
 
   if (response.scriptId) {
-    const claspConfig = {
-      scriptId: response.scriptId,
-      rootDir: "./src", // srcディレクトリを指します
-      filePushOrder: [] // その他の適切なデフォルト値
-    };
-    fs.writeFileSync('.clasp.json', JSON.stringify(claspConfig, null, 2));
-    console.log('✨ .clasp.json を正常に作成しました！');
+    const templateContent = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+    const finalContent = templateContent.replace('__SCRIPT_ID__', response.scriptId);
+    fs.writeFileSync(OUTPUT_PATH, finalContent);
+    console.log(`✨ ${OUTPUT_PATH} を正常に作成しました！`);
     console.log('"npx clasp push" を実行して、ファイルをアップロードしてください。');
   } else {
     console.log('セットアップがキャンセルされました。');

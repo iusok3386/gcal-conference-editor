@@ -38,7 +38,9 @@ jobs:
         run: npm install -g @google/clasp
 
       - name: Create .clasp.json for Preview
-        run: echo '{"scriptId":"${{ secrets.PREVIEW_SCRIPT_ID }}", "rootDir": "src"}' > .clasp.json
+        run: |
+          cp .clasp.json.template .clasp.json
+          sed -i "s/__SCRIPT_ID__/${{ secrets.PREVIEW_SCRIPT_ID }}/g" .clasp.json
 
       - name: Create .clasprc.json
         run: echo '${{ secrets.CLASP_RC }}' > ~/.clasprc.json
@@ -89,7 +91,9 @@ jobs:
         run: npm install -g @google/clasp
 
       - name: Create .clasp.json for Production
-        run: echo '{"scriptId":"${{ secrets.PRODUCTION_SCRIPT_ID }}", "rootDir": "src"}' > .clasp.json
+        run: |
+          cp .clasp.json.template .clasp.json
+          sed -i "s/__SCRIPT_ID__/${{ secrets.PRODUCTION_SCRIPT_ID }}/g" .clasp.json
 
       - name: Create .clasprc.json
         run: echo '${{ secrets.CLASP_RC }}' > ~/.clasprc.json
