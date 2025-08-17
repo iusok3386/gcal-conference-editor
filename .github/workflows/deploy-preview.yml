@@ -48,9 +48,11 @@ jobs:
 
       - name: Extract deployment ID from comment
         id: extract_deployment_id
+        env:
+          COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
         run: |
-          body="${{ steps.find_comment.outputs.comment-body }}"
-          if [[ "$body" =~ <!--\ DEPLOYMENT_ID:\ (.*)\ --> ]]; then
+          # Use an env var to safely handle the multiline comment body
+          if [[ "$COMMENT_BODY" =~ <!--\ DEPLOYMENT_ID:\ (.*)\ --> ]]; then
             deployment_id="${BASH_REMATCH[1]}"
             echo "Found existing deployment ID: $deployment_id"
             echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
