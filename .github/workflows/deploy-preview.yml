@@ -1,0 +1,61 @@
+name: Deploy to Preview Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .clasprc.json
+        run: echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+
+      - name: Create .clasp.json
+        run: sed 's/__SCRIPT_ID__/${{ secrets.PREVIEW_SCRIPT_ID }}/g' .clasp.json.template > .clasp.json
+
+      - name: Build project
+        run: npm run build
+
+      - name: Push to Google Apps Script
+        run: npx clasp push --force
+
+      - name: Create new deployment
+        id: deploy
+        run: |
+          output=$(npx clasp deploy)
+          echo "$output"
+          url=$(echo "$output" | grep -o 'https://.*' | head -n 1)
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR with deployment URL
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            🚀 **Preview Deployment Successful!**
+
+            Your changes have been deployed to a preview environment.
+
+            - **URL:** ${{ steps.deploy.outputs.url }}
+
+            *This comment will be updated with the latest deployment.*
+          token: ${{ secrets.GITHUB_TOKEN }}

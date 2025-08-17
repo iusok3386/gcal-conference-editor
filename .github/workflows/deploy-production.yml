@@ -1,0 +1,47 @@
+name: Deploy to Production Environment
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .clasprc.json
+        run: echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+
+      - name: Create .clasp.json
+        run: sed 's/__SCRIPT_ID__/${{ secrets.PRODUCTION_SCRIPT_ID }}/g' .clasp.json.template > .clasp.json
+
+      - name: Build project
+        run: npm run build
+
+      - name: Push to Google Apps Script
+        run: npx clasp push --force
+
+      - name: Update production deployment
+        id: deploy
+        run: |
+          output=$(npx clasp deploy --deploymentId ${{ secrets.PRODUCTION_DEPLOYMENT_ID }})
+          echo "$output"
+          url=$(echo "$output" | grep -o 'https://.*' | head -n 1)
+          echo "url=$url" >> $GITHUB_OUTPUT
