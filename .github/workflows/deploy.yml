@@ -53,7 +53,8 @@ jobs:
         run: |
           npx clasp deploy --description "Preview for PR #${{ github.event.number }} - ${{ github.sha }}" > deployment-output.txt
           cat deployment-output.txt
-          URL=$(grep -o 'https://.*' deployment-output.txt | head -n 1)
+          DEPLOYMENT_ID=$(awk '{print $2}' deployment-output.txt)
+          URL="https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec"
           echo "url=$URL" >> $GITHUB_OUTPUT
 
       - name: Update GitHub Deployment (Success)
