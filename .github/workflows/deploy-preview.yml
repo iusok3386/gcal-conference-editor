@@ -52,6 +52,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
           body: |
             🚀 **Preview Deployment Successful!**
 
