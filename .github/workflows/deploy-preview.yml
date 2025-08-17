@@ -43,7 +43,7 @@ jobs:
         run: |
           output=$(npx clasp deploy)
           echo "Clasp output: $output"
-          deployment_id=$(echo "$output" | awk '{print $2}')
+          deployment_id=$(echo "$output" | grep -- '^-' | awk '{print $2}')
           url="https://script.google.com/macros/s/${deployment_id}/exec"
           echo "Constructed URL: $url"
           echo "url=$url" >> $GITHUB_OUTPUT
