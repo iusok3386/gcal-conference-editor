@@ -60,7 +60,14 @@ jobs:
 
       - name: Delete deployment comment
         if: steps.find_comment.outputs.comment-id != ''
-        uses: peter-evans/delete-comment@v3
+        uses: actions/github-script@v7
         with:
-          comment-id: ${{ steps.find_comment.outputs.comment-id }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commentId = ${{ steps.find_comment.outputs.comment-id }};
+            console.log(`Attempting to delete comment ID: ${commentId}`);
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+            });
+            console.log(`Successfully deleted comment ID: ${commentId}`);
