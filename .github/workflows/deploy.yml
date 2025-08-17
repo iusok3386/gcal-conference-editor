@@ -16,14 +16,15 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Create Deployment
-        uses: chrnorm/deployment-action@v2
-        id: deployment
+      - name: Create GitHub Deployment
+        uses: bobheadxi/deployments@v1
+        id: create_deployment
         with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          environment: "preview-pr-${{ github.event.number }}"
-          initial_status: "in_progress"
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: preview-pr-${{ github.event.number }}
           ref: ${{ github.event.pull_request.head.sha }}
+          desc: Deploying preview environment
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,22 +57,26 @@ jobs:
           URL="https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec"
           echo "url=$URL" >> $GITHUB_OUTPUT
 
-      - name: Update deployment status (Success)
+      - name: Update GitHub Deployment (Success)
+        uses: bobheadxi/deployments@v1
         if: success()
-        uses: chrnorm/deployment-status-action@v2
         with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          environment_url: ${{ steps.deploy.outputs.url }}
-          state: "success"
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: success
+          env: ${{ steps.create_deployment.outputs.environment }}
+          env_url: ${{ steps.deploy.outputs.url }}
+          deployment_id: ${{ steps.create_deployment.outputs.id }}
 
-      - name: Update deployment status (Failure)
+      - name: Update GitHub Deployment (Failure)
+        uses: bobheadxi/deployments@v1
         if: failure() || cancelled()
-        uses: chrnorm/deployment-status-action@v2
         with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          state: "failure"
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.create_deployment.outputs.environment }}
+          deployment_id: ${{ steps.create_deployment.outputs.id }}
 
   deploy_production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
