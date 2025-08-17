@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: preview
-      url: ${{ steps.deploy.outputs.url }}
+      url: ${{ steps.update_comment.outputs.url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,18 +38,6 @@ jobs:
       - name: Push to Google Apps Script
         run: npx clasp push --force
 
-      - name: Create new deployment
-        id: deploy
-        run: |
-          sha_short=$(echo "${{ github.sha }}" | cut -c1-7)
-          description="Preview for PR #${{ github.event.pull_request.number }} - ${sha_short}"
-          output=$(npx clasp deploy --description "$description")
-          echo "Clasp output: $output"
-          deployment_id=$(echo "$output" | grep -- '^-' | awk '{print $2}')
-          url="https://script.google.com/macros/s/${deployment_id}/exec"
-          echo "Constructed URL: $url"
-          echo "url=$url" >> $GITHUB_OUTPUT
-
       - name: Find previous deployment comment
         id: find_comment
         uses: peter-evans/find-comment@v3
@@ -58,7 +46,59 @@ jobs:
           comment-author: 'github-actions[bot]'
           body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
 
+      - name: Extract deployment ID from comment
+        id: extract_deployment_id
+        run: |
+          body="${{ steps.find_comment.outputs.comment-body }}"
+          if [[ "$body" =~ <!--\ DEPLOYMENT_ID:\ (.*)\ --> ]]; then
+            deployment_id="${BASH_REMATCH[1]}"
+            echo "Found existing deployment ID: $deployment_id"
+            echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          else
+            echo "No existing deployment ID found. Will create a new one."
+            echo "deployment_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create new deployment (if none exists)
+        id: create_deployment
+        if: steps.extract_deployment_id.outputs.deployment_id == ''
+        run: |
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-7)
+          description="Preview for PR #${{ github.event.pull_request.number }} - ${sha_short}"
+          output=$(npx clasp deploy --description "$description")
+          echo "Clasp output: $output"
+          id=$(echo "$output" | grep -- '^-' | awk '{print $2}')
+          echo "deployment_id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Update existing deployment (if one exists)
+        id: update_deployment
+        if: steps.extract_deployment_id.outputs.deployment_id != ''
+        run: |
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-7)
+          description="Preview for PR #${{ github.event.pull_request.number }} - ${sha_short} (update)"
+          deployment_id="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          output=$(npx clasp deploy --deploymentId "$deployment_id" --description "$description")
+          echo "Clasp output: $output"
+          # No need to output the ID, we already have it.
+
+      - name: Set final deployment info
+        id: set_final_info
+        run: |
+          if [[ -n "${{ steps.create_deployment.outputs.deployment_id }}" ]]; then
+            # Path for new deployments
+            id="${{ steps.create_deployment.outputs.deployment_id }}"
+          else
+            # Path for existing deployments
+            id="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          fi
+          url="https://script.google.com/macros/s/${id}/exec"
+          echo "Final Deployment ID: $id"
+          echo "Final URL: $url"
+          echo "deployment_id=$id" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
       - name: Create or update comment with deployment URL
+        id: update_comment
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
@@ -66,11 +106,12 @@ jobs:
           edit-mode: replace
           body: |
             <!-- PREVIEW_DEPLOYMENT_COMMENT -->
+            <!-- DEPLOYMENT_ID: ${{ steps.set_final_info.outputs.deployment_id }} -->
             🚀 **Preview Deployment Successful!**
 
             Your changes have been deployed to a preview environment.
 
-            - **URL:** ${{ steps.deploy.outputs.url }}
+            - **URL:** ${{ steps.set_final_info.outputs.url }}
 
             *This comment will be updated with the latest deployment.*
           token: ${{ secrets.GITHUB_TOKEN }}

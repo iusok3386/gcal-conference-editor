@@ -1,0 +1,66 @@
+name: Cleanup Preview Deployments
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: write # Required for deleting comments
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .clasprc.json
+        run: echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+
+      - name: Create .clasp.json
+        run: sed 's/__SCRIPT_ID__/${{ secrets.PREVIEW_SCRIPT_ID }}/g' .clasp.json.template > .clasp.json
+
+      - name: Find deployment comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
+
+      - name: Extract deployment ID from comment
+        id: extract_deployment_id
+        if: steps.find_comment.outputs.comment-id != ''
+        run: |
+          body="${{ steps.find_comment.outputs.comment-body }}"
+          if [[ "$body" =~ <!--\ DEPLOYMENT_ID:\ (.*)\ --> ]]; then
+            deployment_id="${BASH_REMATCH[1]}"
+            echo "Found deployment ID to delete: $deployment_id"
+            echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          else
+            echo "Could not find deployment ID in comment."
+            echo "deployment_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Delete Apps Script deployment
+        if: steps.extract_deployment_id.outputs.deployment_id != ''
+        run: |
+          deployment_id="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          echo "Deleting deployment $deployment_id..."
+          npx clasp delete-deployment "$deployment_id"
+
+      - name: Delete deployment comment
+        if: steps.find_comment.outputs.comment-id != ''
+        uses: peter-evans/delete-comment@v3
+        with:
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          token: ${{ secrets.GITHUB_TOKEN }}
