@@ -51,11 +51,17 @@ jobs:
         env:
           COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
         run: |
-          # Use an env var to safely handle the multiline comment body
-          if [[ "$COMMENT_BODY" =~ <!--\ DEPLOYMENT_ID:\ (.*)\ --> ]]; then
-            deployment_id="${BASH_REMATCH[1]}"
-            echo "Found existing deployment ID: $deployment_id"
-            echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          # Use grep and sed for robust parsing, avoiding bash regex issues.
+          id_line=$(echo "$COMMENT_BODY" | grep '<!-- DEPLOYMENT_ID:')
+          if [[ -n "$id_line" ]]; then
+            deployment_id=$(echo "$id_line" | sed -n 's/.*<!-- DEPLOYMENT_ID: \(.*\) -->.*/\1/p')
+            if [[ -n "$deployment_id" ]]; then
+              echo "Found existing deployment ID: $deployment_id"
+              echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+            else
+              echo "Could not extract deployment ID with sed."
+              echo "deployment_id=" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "No existing deployment ID found. Will create a new one."
             echo "deployment_id=" >> "$GITHUB_OUTPUT"
