@@ -63,6 +63,7 @@ jobs:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}
           status: success
+          env: ${{ steps.deployment.outputs.environment }}
           env_url: ${{ steps.deploy.outputs.url }}
           deployment_id: ${{ steps.deployment.outputs.id }}
 
@@ -73,6 +74,7 @@ jobs:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}
           status: ${{ job.status }}
+          env: ${{ steps.deployment.outputs.environment }}
           deployment_id: ${{ steps.deployment.outputs.id }}
 
   deploy_production:
