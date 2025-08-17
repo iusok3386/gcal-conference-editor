@@ -41,7 +41,9 @@ jobs:
       - name: Update production deployment
         id: deploy
         run: |
-          output=$(npx clasp deploy --deploymentId ${{ secrets.PRODUCTION_DEPLOYMENT_ID }})
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-7)
+          description="Production deployment from commit ${sha_short}"
+          output=$(npx clasp deploy --deploymentId ${{ secrets.PRODUCTION_DEPLOYMENT_ID }} --description "$description")
           echo "Clasp output: $output"
           # The production URL is stable and does not change on redeploy.
           # We construct it manually for the GitHub environments tab.

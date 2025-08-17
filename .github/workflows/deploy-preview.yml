@@ -41,7 +41,9 @@ jobs:
       - name: Create new deployment
         id: deploy
         run: |
-          output=$(npx clasp deploy)
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-7)
+          description="Preview for PR #${{ github.event.pull_request.number }} - ${sha_short}"
+          output=$(npx clasp deploy --description "$description")
           echo "Clasp output: $output"
           deployment_id=$(echo "$output" | grep -- '^-' | awk '{print $2}')
           url="https://script.google.com/macros/s/${deployment_id}/exec"
