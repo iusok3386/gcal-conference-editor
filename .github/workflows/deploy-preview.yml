@@ -48,12 +48,22 @@ jobs:
           echo "Constructed URL: $url"
           echo "url=$url" >> $GITHUB_OUTPUT
 
-      - name: Comment on PR with deployment URL
+      - name: Find previous deployment comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
+
+      - name: Create or update comment with deployment URL
         uses: peter-evans/create-or-update-comment@v4
         with:
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           edit-mode: replace
           body: |
+            <!-- PREVIEW_DEPLOYMENT_COMMENT -->
             🚀 **Preview Deployment Successful!**
 
             Your changes have been deployed to a preview environment.
