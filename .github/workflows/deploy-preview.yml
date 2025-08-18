@@ -1,0 +1,125 @@
+name: Deploy to Preview Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.set_final_info.outputs.url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .clasprc.json
+        run: echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+
+      - name: Create .clasp.json
+        run: sed 's/__SCRIPT_ID__/${{ secrets.PREVIEW_SCRIPT_ID }}/g' .clasp.json.template > .clasp.json
+
+      - name: Build project
+        run: npm run build
+
+      - name: Push to Google Apps Script
+        run: npx clasp push --force
+
+      - name: Find previous deployment comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
+
+      - name: Extract deployment ID from comment
+        id: extract_deployment_id
+        env:
+          COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
+        run: |
+          # Use an `if` statement to handle grep's non-zero exit code when no match is found.
+          if id_line=$(echo "$COMMENT_BODY" | grep '<!-- DEPLOYMENT_ID:'); then
+            echo "Found line with deployment ID."
+            deployment_id=$(echo "$id_line" | sed -n 's/.*<!-- DEPLOYMENT_ID: \(.*\) -->.*/\1/p')
+            if [[ -n "$deployment_id" ]]; then
+              echo "Found existing deployment ID: $deployment_id"
+              echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+            else
+              echo "Line found, but could not extract ID with sed."
+              echo "deployment_id=" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "No existing deployment ID found. Will create a new one."
+            echo "deployment_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create new deployment (if none exists)
+        id: create_deployment
+        if: steps.extract_deployment_id.outputs.deployment_id == ''
+        run: |
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-7)
+          description="Preview for PR #${{ github.event.pull_request.number }} - ${sha_short}"
+          output=$(npx clasp deploy --description "$description")
+          echo "Clasp output: $output"
+          id=$(echo "$output" | grep -- '^-' | awk '{print $2}')
+          echo "deployment_id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Update existing deployment (if one exists)
+        id: update_deployment
+        if: steps.extract_deployment_id.outputs.deployment_id != ''
+        run: |
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-7)
+          description="Preview for PR #${{ github.event.pull_request.number }} - ${sha_short} (update)"
+          deployment_id="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          output=$(npx clasp deploy --deploymentId "$deployment_id" --description "$description")
+          echo "Clasp output: $output"
+          # No need to output the ID, we already have it.
+
+      - name: Set final deployment info
+        id: set_final_info
+        run: |
+          if [[ -n "${{ steps.create_deployment.outputs.deployment_id }}" ]]; then
+            # Path for new deployments
+            id="${{ steps.create_deployment.outputs.deployment_id }}"
+          else
+            # Path for existing deployments
+            id="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          fi
+          url="https://script.google.com/macros/s/${id}/exec"
+          echo "Final Deployment ID: $id"
+          echo "Final URL: $url"
+          echo "deployment_id=$id" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update comment with deployment URL
+        id: update_comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- PREVIEW_DEPLOYMENT_COMMENT -->
+            <!-- DEPLOYMENT_ID: ${{ steps.set_final_info.outputs.deployment_id }} -->
+            🚀 **Preview Deployment Successful!**
+
+            Your changes have been deployed to a preview environment.
+
+            - **URL:** ${{ steps.set_final_info.outputs.url }}
+
+            *This comment will be updated with the latest deployment.*
+          token: ${{ secrets.GITHUB_TOKEN }}
