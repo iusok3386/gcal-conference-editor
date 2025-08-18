@@ -18,6 +18,9 @@ type EventInfo = {
   summary: string;
 };
 
+// Based on https://developers.google.com/workspace/calendar/api/v3/reference/events#resource
+type ConferenceData = GoogleAppsScript.Calendar.Schema.ConferenceData;
+
 
 /**
  * Web アプリの HTML を提供します。
@@ -34,47 +37,27 @@ function doGet(): GoogleAppsScript.HTML.HtmlOutput {
  *
  * @param {string} calendarId カレンダーの ID。
  * @param {string} eventId イベントの ID。
- * @param {string} newUri ビデオ会議の新しい URI。
+ * @param {ConferenceData | null} conferenceData 更新する会議情報。null の場合は削除。
  * @returns {AppResponse} 成功ステータスとメッセージを含む結果オブジェクト。
  */
-function updateConferenceData(calendarId: string, eventId: string, newUri: string): AppResponse {
+function updateConferenceData(calendarId: string, eventId: string, conferenceData: ConferenceData | null): AppResponse {
   // 入力を検証
-  if (!calendarId || !eventId || !newUri) {
-    return { success: false, message: 'カレンダー ID、イベント ID、新しい URI は必須です。' };
+  if (!calendarId || !eventId) {
+    return { success: false, message: 'カレンダー ID、イベント ID は必須です。' };
   }
 
   try {
     if (!Calendar.Events) {
         return { success: false, message: 'Calendar API が有効になっていません。' };
     }
-    // 1. Calendar 上級サービスを使用してイベントを取得します。
-    const event: GoogleAppsScript.Calendar.Schema.Event = Calendar.Events.get(calendarId, eventId);
 
-    // 2. conferenceData と entryPoints が存在するか確認します。
-    if (!event.conferenceData || !event.conferenceData.entryPoints || event.conferenceData.entryPoints.length === 0) {
-      return { success: false, message: 'このイベントには編集可能なビデオ会議情報がありません。' };
-    }
-
-    // 3. 最初の 'video' エントリーポイントを見つけて、その URI を更新します。
-    let updated = false;
-    for (const entryPoint of event.conferenceData.entryPoints) {
-      if (entryPoint.entryPointType === 'video') {
-        entryPoint.uri = newUri;
-        updated = true;
-        break; // 最初のものを更新した後に停止します。
-      }
-    }
-
-    if (!updated) {
-        return { success: false, message: '更新対象のビデオ会議情報 (entryPointType="video") が見つかりませんでした。' };
-    }
-
-    // 4. patch リクエストのリソースを作成します。更新するフィールドのみを含む必要があります。
+    // patch リクエストのリソースを作成します。
     const resource: GoogleAppsScript.Calendar.Schema.Event = {
-      conferenceData: event.conferenceData
+      // @ts-ignore According to API docs, null should be used to clear the field, but the type definition expects undefined.
+      conferenceData: conferenceData
     };
 
-    // 5. イベントにパッチを適用します。
+    // イベントにパッチを適用します。
     // conferenceDataVersion: 1 は、Google Meet が会議情報を自動更新するのを防ぐために必要です。
     Calendar.Events.patch(resource, calendarId, eventId, {
       conferenceDataVersion: 1
@@ -86,6 +69,27 @@ function updateConferenceData(calendarId: string, eventId: string, newUri: strin
     // デバッグ用にエラーをログに記録し、ユーザーフレンドリーなメッセージを返します。
     console.error('Error in updateConferenceData: ' + e.toString() + ' Stack: ' + e.stack);
     return { success: false, message: 'サーバーエラーが発生しました: ' + e.message };
+  }
+}
+
+
+/**
+ * 特定のイベントの会議情報を取得します。
+ * @param {string} calendarId カレンダーの ID。
+ * @param {string} eventId イベントの ID。
+ * @returns {ConferenceData} 会議情報。
+ */
+function getConferenceData(calendarId: string, eventId: string): ConferenceData {
+  try {
+    if (!Calendar.Events) {
+      throw new Error('Calendar API が有効になっていません。');
+    }
+    const event = Calendar.Events.get(calendarId, eventId);
+    return event.conferenceData || { entryPoints: [] }; // データがない場合はデフォルトの空オブジェクトを返す
+  } catch (e: any) {
+    console.error('Error in getConferenceData: ' + e.toString());
+    // エラーが発生した場合も、フロントエンドが処理しやすいようにデフォルトオブジェクトを返す
+    return { entryPoints: [] };
   }
 }
 
