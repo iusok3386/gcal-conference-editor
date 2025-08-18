@@ -4,7 +4,7 @@
   <base target="_top">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; max-width: 600px; }
-    #selection-container, #conference-form-container, #json-editor-container { display: flex; flex-direction: column; gap: 15px; }
+    #selection-container, .form-section { display: flex; flex-direction: column; gap: 15px; }
     label { font-weight: bold; }
     input[type="text"], input[type="url"], select, textarea {
       padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;
@@ -21,6 +21,7 @@
     .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
     .warning-text { font-size: 12px; color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 4px; margin-top: 5px; }
+    .description { font-size: 12px; color: #666; margin-top: -10px; margin-bottom: 10px; }
     .loader {
       border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db;
       width: 16px; height: 16px; animation: spin 2s linear infinite;
@@ -62,35 +63,40 @@
         <button id="mode-toggle-button" class="secondary">JSONモードに切り替え</button>
     </div>
 
-    <div id="conference-form-container">
+    <div id="conference-form-container" class="form-section">
         <h3>会議ソリューション</h3>
         <div>
-          <label for="name">名前:</label>
-          <input type="text" id="name" name="name">
+          <label for="name">名前</label>
+          <input type="text" id="name" name="name" placeholder="YouTube Live">
+          <p class="description">会議ソリューションのサービス名です。(例: Google Meet, Zoom)</p>
         </div>
         <div>
-          <label for="iconUri">アイコン URI:</label>
-          <input type="url" id="iconUri" name="iconUri">
+          <label for="iconUri">アイコン URI</label>
+          <input type="url" id="iconUri" name="iconUri" placeholder="https://fonts.gstatic.com/s/i/productlogos/youtube_color_64dp.png">
           <p id="icon-uri-warning" class="warning-text hidden">警告: このホスト名の画像は、Googleカレンダーで正しく表示されない可能性があります。</p>
+          <p class="description">サービスを表すアイコン画像のURL。許可されたホスト上の画像のみ有効です。</p>
           <img id="icon-preview" src="" alt="Icon Preview">
           <a id="icon-link" href="#" target="_blank" style="display: none; margin-left: 10px;">リンクを確認</a>
         </div>
         <div>
-          <label for="type">キータイプ:</label>
+          <label for="type">キータイプ</label>
           <select id="type" name="type">
             <option value="addOn">addOn</option>
             <option value="hangoutsMeet">hangoutsMeet</option>
             <option value="eventHangout">eventHangout</option>
             <option value="eventNamedHangout">eventNamedHangout</option>
           </select>
+          <p class="description">会議ソリューションの種類。Google Meet以外は通常 `addOn` を選択します。</p>
         </div>
         <div>
-          <label for="conferenceId">会議 ID:</label>
-          <input type="text" id="conferenceId" name="conferenceId">
+          <label for="conferenceId">会議 ID</label>
+          <input type="text" id="conferenceId" name="conferenceId" placeholder="dQw4w9WgXcQ">
+          <p class="description">この会議を識別するための一意のIDです。(例: YouTubeの動画ID)</p>
         </div>
         <div>
-          <label for="notes">メモ:</label>
-          <textarea id="notes" name="notes" rows="4"></textarea>
+          <label for="notes">メモ</label>
+          <textarea id="notes" name="notes" rows="4" placeholder="この会議は録画されます。"></textarea>
+          <p class="description">会議に関する追加情報や説明です。HTMLタグも使用できます。</p>
         </div>
 
         <h3>エントリーポイント</h3>
@@ -98,7 +104,7 @@
         <button type="button" id="add-entry-point">エントリーポイントを追加</button>
     </div>
 
-    <div id="json-editor-container" class="hidden">
+    <div id="json-editor-container" class="hidden form-section">
         <h3>JSONエディタ</h3>
         <textarea id="json-editor"></textarea>
     </div>
@@ -114,21 +120,25 @@
   <template id="entry-point-template">
     <div class="entry-point">
       <div>
-        <label>タイプ:</label>
+        <label>タイプ</label>
         <select class="entryPointType">
           <option value="video">video</option>
           <option value="phone">phone</option>
           <option value="sip">sip</option>
           <option value="more">more</option>
         </select>
+        <p class="description">参加方法の種類を選択します。(video, phoneなど)</p>
       </div>
-      <div>
-        <label>ラベル:</label>
+      <div class="label-wrapper">
+        <label>ラベル</label>
         <input type="text" class="label">
+        <p class="description">参加方法の分かりやすい名前です。(例: チャンネル名, 動画タイトル)</p>
       </div>
       <div>
-        <label>URI:</label>
+        <label>URI</label>
         <input type="url" class="uri">
+        <p class="uri-validation-error warning-text hidden">URIの形式が正しくありません。</p>
+        <p class="description">会議に参加するためのURLです。</p>
       </div>
       <button type="button" class="remove-entry-point">このエントリーポイントを削除</button>
     </div>
@@ -151,12 +161,15 @@
     let currentMode = 'FORM'; // 'FORM' or 'JSON'
     // For details on the hostname restriction, see: https://developers.google.com/workspace/add-ons/calendar/conferencing/providing-logos
     const ALLOWED_ICON_HOSTNAMES = [
-        'fonts.gstatic.com',
-        'lh3.googleusercontent.com',
-        'lh4.googleusercontent.com',
-        'lh5.googleusercontent.com',
-        'lh6.googleusercontent.com'
+        'fonts.gstatic.com', 'lh3.googleusercontent.com', 'lh4.googleusercontent.com',
+        'lh5.googleusercontent.com', 'lh6.googleusercontent.com'
     ];
+    const ENTRY_POINT_CONFIG = {
+        'video': { labelPlaceholder: 'meet.google.com/aaa-bbbb-ccc', uriPlaceholder: 'https://meet.google.com/aaa-bbbb-ccc', requiredSchema: ['http:', 'https:'] },
+        'phone': { labelPlaceholder: '+1 123 268 2601', uriPlaceholder: 'tel:+11232682601', requiredSchema: ['tel:'] },
+        'sip': { labelPlaceholder: '12345678@altostrat.com', uriPlaceholder: 'sip:12345678@myprovider.com', requiredSchema: ['sip:'] },
+        'more': { labelPlaceholder: '', uriPlaceholder: 'https://www.google.com/calendar/event', requiredSchema: ['http:', 'https:'], disableLabel: true }
+    };
 
     // --- Utility Functions ---
     function populateSelect(select, items, defaultOptionText) {
@@ -172,10 +185,13 @@
       statusDiv.style.display = 'block';
       statusDiv.textContent = message;
       statusDiv.className = isError ? 'error' : (isLoading ? '' : 'success');
+      if (!isError && !isLoading) {
+        setTimeout(() => statusDiv.style.display = 'none', 5000);
+      }
     }
 
     function isValidUrl(string) {
-      if (!string) return true; // Allow empty URLs
+      if (!string) return true;
       try {
         new URL(string);
         return true;
@@ -185,23 +201,26 @@
     }
 
     function validateIconHost(iconUrl) {
-        if (!iconUrl || !isValidUrl(iconUrl)) {
-            return true; // Don't validate if it's empty or not a URL
-        }
+        if (!iconUrl || !isValidUrl(iconUrl)) return true;
         try {
             const hostname = new URL(iconUrl).hostname;
             return ALLOWED_ICON_HOSTNAMES.includes(hostname);
-        } catch (e) {
-            return false;
-        }
+        } catch (e) { return false; }
+    }
+
+    function validateEntryPointUri(uri, type) {
+        if (!uri || !isValidUrl(uri)) return true;
+        const config = ENTRY_POINT_CONFIG[type];
+        if (!config) return true; // Should not happen
+        try {
+            const url = new URL(uri);
+            return config.requiredSchema.includes(url.protocol);
+        } catch (e) { return false; }
     }
 
     function runGoogleScript(funcName, ...args) {
       return new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
-          [funcName](...args);
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[funcName](...args);
       });
     }
 
@@ -211,35 +230,65 @@
         const entryPoints = [];
         entryPointElements.forEach(ep => {
             entryPoints.push({
-            entryPointType: ep.querySelector('.entryPointType').value,
-            label: ep.querySelector('.label').value,
-            uri: ep.querySelector('.uri').value,
+                entryPointType: ep.querySelector('.entryPointType').value,
+                label: ep.querySelector('.label').value,
+                uri: ep.querySelector('.uri').value,
             });
         });
-
         return {
             conferenceId: document.getElementById('conferenceId').value,
             conferenceSolution: {
-            key: { type: document.getElementById('type').value },
-            name: document.getElementById('name').value,
-            iconUri: document.getElementById('iconUri').value,
+                key: { type: document.getElementById('type').value },
+                name: document.getElementById('name').value,
+                iconUri: document.getElementById('iconUri').value,
             },
             notes: document.getElementById('notes').value,
             entryPoints: entryPoints
         };
     }
 
+    function updateEntryPointUI(entryPointDiv) {
+        const type = entryPointDiv.querySelector('.entryPointType').value;
+        const labelInput = entryPointDiv.querySelector('.label');
+        const uriInput = entryPointDiv.querySelector('.uri');
+        const labelWrapper = entryPointDiv.querySelector('.label-wrapper');
+        const uriError = entryPointDiv.querySelector('.uri-validation-error');
+
+        const config = ENTRY_POINT_CONFIG[type];
+        if (!config) return;
+
+        labelInput.placeholder = config.labelPlaceholder;
+        uriInput.placeholder = config.uriPlaceholder;
+
+        if (config.disableLabel) {
+            labelInput.value = '';
+            labelWrapper.classList.add('hidden');
+        } else {
+            labelWrapper.classList.remove('hidden');
+        }
+
+        const isValid = validateEntryPointUri(uriInput.value, type);
+        uriError.classList.toggle('hidden', isValid);
+        if(!isValid) {
+            uriError.textContent = `URIは ${config.requiredSchema.join(' または ')} で始まる必要があります。`;
+        }
+    }
+
     function addEntryPoint(data = {}) {
       const clone = entryPointTemplate.content.cloneNode(true);
       const entryPointDiv = clone.querySelector('.entry-point');
+      const typeSelect = entryPointDiv.querySelector('.entryPointType');
+      const uriInput = entryPointDiv.querySelector('.uri');
 
-      entryPointDiv.querySelector('.entryPointType').value = data.entryPointType || 'video';
+      typeSelect.value = data.entryPointType || 'video';
       entryPointDiv.querySelector('.label').value = data.label || '';
-      entryPointDiv.querySelector('.uri').value = data.uri || '';
+      uriInput.value = data.uri || '';
 
-      entryPointDiv.querySelector('.remove-entry-point').addEventListener('click', () => {
-        entryPointsContainer.removeChild(entryPointDiv);
-      });
+      typeSelect.addEventListener('change', () => updateEntryPointUI(entryPointDiv));
+      uriInput.addEventListener('input', () => updateEntryPointUI(entryPointDiv));
+      updateEntryPointUI(entryPointDiv); // Initial setup
+
+      entryPointDiv.querySelector('.remove-entry-point').addEventListener('click', () => entryPointsContainer.removeChild(entryPointDiv));
       entryPointsContainer.appendChild(clone);
     }
 
@@ -260,7 +309,7 @@
       if (d.entryPoints && d.entryPoints.length > 0) {
         d.entryPoints.forEach(ep => addEntryPoint(ep));
       } else {
-        addEntryPoint(); // Add one blank entry point if none exist
+        addEntryPoint();
       }
       editorContainer.classList.remove('hidden');
     }
@@ -282,17 +331,11 @@
             iconLink.style.display = 'none';
         }
 
-        if (url && !validateIconHost(url)) {
-            warning.classList.remove('hidden');
-        } else {
-            warning.classList.add('hidden');
-        }
+        warning.classList.toggle('hidden', validateIconHost(url));
     }
 
-    // --- Mode Toggling ---
     function toggleMode() {
         if (currentMode === 'FORM') {
-            // Switch to JSON mode
             try {
                 const data = buildConferenceDataFromForm();
                 jsonEditor.value = JSON.stringify(data, null, 2);
@@ -300,21 +343,16 @@
                 conferenceFormContainer.classList.add('hidden');
                 jsonEditorContainer.classList.remove('hidden');
                 modeToggleButton.textContent = 'フォームモードに切り替え';
-            } catch (err) {
-                setStatus('フォームからJSONへの変換に失敗しました: ' + err.message, true);
-            }
+            } catch (err) { setStatus('フォームからJSONへの変換に失敗しました: ' + err.message, true); }
         } else {
-            // Switch to FORM mode
             try {
                 const data = JSON.parse(jsonEditor.value);
-                populateForm(data); // This repopulates the form with the JSON content
+                populateForm(data);
                 currentMode = 'FORM';
                 jsonEditorContainer.classList.add('hidden');
                 conferenceFormContainer.classList.remove('hidden');
                 modeToggleButton.textContent = 'JSONモードに切り替え';
-            } catch (err) {
-                setStatus('JSONのパースに失敗しました。フォーマットを確認してください。: ' + err.message, true);
-            }
+            } catch (err) { setStatus('JSONのパースに失敗しました。フォーマットを確認してください。: ' + err.message, true); }
         }
     }
 
@@ -327,9 +365,7 @@
         } else {
           calendarSelect.innerHTML = '<option value="">利用可能なカレンダーがありません</option>';
         }
-      } catch (err) {
-        setStatus('カレンダーの読み込みに失敗: ' + err.message, true);
-      }
+      } catch (err) { setStatus('カレンダーの読み込みに失敗: ' + err.message, true); }
     });
 
     calendarSelect.addEventListener('change', async () => {
@@ -348,20 +384,14 @@
         } else {
           eventSelect.innerHTML = '<option value="">イベントが見つかりません</option>';
         }
-      } catch (err) {
-        setStatus('イベントの読み込みに失敗: ' + err.message, true);
-      } finally {
-        eventLoader.style.display = 'none';
-      }
+      } catch (err) { setStatus('イベントの読み込みに失敗: ' + err.message, true); }
+      finally { eventLoader.style.display = 'none'; }
     });
 
     eventSelect.addEventListener('change', async () => {
       const eventId = eventSelect.value;
       const calendarId = calendarSelect.value;
-      if (!eventId || !calendarId) {
-        editorContainer.classList.add('hidden');
-        return;
-      }
+      if (!eventId || !calendarId) { editorContainer.classList.add('hidden'); return; }
 
       setStatus('会議情報を読み込み中...', false, true);
       try {
@@ -388,30 +418,23 @@
       if (currentMode === 'JSON') {
           try {
               conferenceData = JSON.parse(jsonEditor.value);
-          } catch (err) {
-              setStatus('JSONのフォーマットが不正です。修正してください。: ' + err.message, true);
-              return;
-          }
+          } catch (err) { setStatus('JSONのフォーマットが不正です。修正してください。: ' + err.message, true); return; }
       } else {
           conferenceData = buildConferenceDataFromForm();
       }
 
       // --- Validation ---
-      const iconUri = conferenceData?.conferenceSolution?.iconUri;
-      if (!validateIconHost(iconUri)) {
+      if (!validateIconHost(conferenceData?.conferenceSolution?.iconUri)) {
           setStatus('アイコンURIのホスト名が許可されていません。警告を確認してください。', true);
           return;
       }
 
-      let allUrlsValid = true;
-      if (iconUri && !isValidUrl(iconUri)) {
-          allUrlsValid = false;
-      }
+      let allUrisValid = true;
       conferenceData?.entryPoints?.forEach(ep => {
-        if (ep.uri && !isValidUrl(ep.uri)) allUrlsValid = false;
+          if (!validateEntryPointUri(ep.uri, ep.entryPointType)) allUrisValid = false;
       });
-      if (!allUrlsValid) {
-          setStatus('無効なURLが含まれています。修正してください。', true);
+      if (!allUrisValid) {
+          setStatus('エントリーポイントに不正な形式のURIが含まれています。', true);
           return;
       }
 
@@ -419,28 +442,20 @@
       try {
         const response = await runGoogleScript('updateConferenceData', calendarId, eventId, conferenceData);
         setStatus(response.message, !response.success);
-      } catch (err) {
-        setStatus('更新に失敗しました: ' + err.message, true);
-      }
+      } catch (err) { setStatus('更新に失敗しました: ' + err.message, true); }
     });
 
     document.getElementById('delete-button').addEventListener('click', async () => {
         if (!confirm('本当にこのイベントの会議情報をすべて削除しますか？')) return;
-
         const calendarId = calendarSelect.value;
         const eventId = eventSelect.value;
         setStatus('会議情報を削除中...', false, true);
         try {
             const response = await runGoogleScript('updateConferenceData', calendarId, eventId, null);
             setStatus(response.message, !response.success);
-            if(response.success) {
-                populateForm(null);
-            }
-        } catch (err) {
-            setStatus('削除に失敗しました: ' + err.message, true);
-        }
+            if (response.success) populateForm(null);
+        } catch (err) { setStatus('削除に失敗しました: ' + err.message, true); }
     });
-
   </script>
 </body>
 </html>
