@@ -20,42 +20,42 @@ type EventInfo = {
 
 
 /**
- * WebアプリのHTMLを提供します。
- * @returns {GoogleAppsScript.HTML.HtmlOutput} レンダリングされるHTML出力。
+ * Web アプリの HTML を提供します。
+ * @returns {GoogleAppsScript.HTML.HtmlOutput} レンダリングされる HTML 出力。
  */
 function doGet(): GoogleAppsScript.HTML.HtmlOutput {
   return HtmlService.createHtmlOutputFromFile('index.html')
-      .setTitle('Googleカレンダー 会議URL編集ツール');
+      .setTitle('Google カレンダー 会議 URL 編集ツール');
 }
 
 /**
- * Googleカレンダーのイベントの会議情報を更新します。
+ * Google カレンダーのイベントの会議情報を更新します。
  * この関数はクライアントサイドのスクリプトから呼び出されることを想定しています。
  *
- * @param {string} calendarId カレンダーのID。
- * @param {string} eventId イベントのID。
- * @param {string} newUri ビデオ会議の新しいURI。
+ * @param {string} calendarId カレンダーの ID。
+ * @param {string} eventId イベントの ID。
+ * @param {string} newUri ビデオ会議の新しい URI。
  * @returns {AppResponse} 成功ステータスとメッセージを含む結果オブジェクト。
  */
 function updateConferenceData(calendarId: string, eventId: string, newUri: string): AppResponse {
   // 入力を検証
   if (!calendarId || !eventId || !newUri) {
-    return { success: false, message: 'カレンダーID、イベントID、新しいURIは必須です。' };
+    return { success: false, message: 'カレンダー ID、イベント ID、新しい URI は必須です。' };
   }
 
   try {
     if (!Calendar.Events) {
-        return { success: false, message: 'Calendar APIが有効になっていません。' };
+        return { success: false, message: 'Calendar API が有効になっていません。' };
     }
-    // 1. Calendar上級サービスを使用してイベントを取得します。
+    // 1. Calendar 上級サービスを使用してイベントを取得します。
     const event: GoogleAppsScript.Calendar.Schema.Event = Calendar.Events.get(calendarId, eventId);
 
-    // 2. conferenceDataとentryPointsが存在するか確認します。
+    // 2. conferenceData と entryPoints が存在するか確認します。
     if (!event.conferenceData || !event.conferenceData.entryPoints || event.conferenceData.entryPoints.length === 0) {
       return { success: false, message: 'このイベントには編集可能なビデオ会議情報がありません。' };
     }
 
-    // 3. 最初の 'video' エントリーポイントを見つけて、そのURIを更新します。
+    // 3. 最初の 'video' エントリーポイントを見つけて、その URI を更新します。
     let updated = false;
     for (const entryPoint of event.conferenceData.entryPoints) {
       if (entryPoint.entryPointType === 'video') {
@@ -69,12 +69,13 @@ function updateConferenceData(calendarId: string, eventId: string, newUri: strin
         return { success: false, message: '更新対象のビデオ会議情報 (entryPointType="video") が見つかりませんでした。' };
     }
 
-    // 4. patchリクエストのリソースを作成します。更新するフィールドのみを含む必要があります。
+    // 4. patch リクエストのリソースを作成します。更新するフィールドのみを含む必要があります。
     const resource: GoogleAppsScript.Calendar.Schema.Event = {
       conferenceData: event.conferenceData
     };
 
     // 5. イベントにパッチを適用します。
+    // conferenceDataVersion: 1 は、Google Meet が会議情報を自動更新するのを防ぐために必要です。
     Calendar.Events.patch(resource, calendarId, eventId, {
       conferenceDataVersion: 1
     });
@@ -95,7 +96,7 @@ function updateConferenceData(calendarId: string, eventId: string, newUri: strin
 function getCalendars(): CalendarInfo[] {
   try {
     if (!Calendar.CalendarList) {
-      console.error('Calendar APIが有効になっていません。');
+      console.error('Calendar API が有効になっていません。');
       return [];
     }
     const calendars = Calendar.CalendarList.list({ showHidden: false });
@@ -116,7 +117,7 @@ function getCalendars(): CalendarInfo[] {
 
 /**
  * 特定のカレンダーから今後のイベントを取得します。
- * @param {string} calendarId 取得元のカレンダーID。
+ * @param {string} calendarId 取得元のカレンダー ID。
  * @returns {EventInfo[]} イベントのリスト。
  */
 function getEvents(calendarId: string): EventInfo[] {
@@ -125,7 +126,7 @@ function getEvents(calendarId: string): EventInfo[] {
   }
   try {
     if (!Calendar.Events) {
-      console.error('Calendar APIが有効になっていません。');
+      console.error('Calendar API が有効になっていません。');
       return [];
     }
     const now = new Date();
