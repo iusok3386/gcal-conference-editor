@@ -13,7 +13,7 @@
     "build-ui": "npm run build --prefix src/ui",
     "license": "license-check-and-add add -f license-config.json",
     "test": "jest test/ --passWithNoTests --detectOpenHandles",
-    "test-ui": "npm run test --prefix src/ui",
+    "test-ui": "npm run test --prefix src/ui -- --no-watch --no-progress --browsers=ChromeHeadless",
     "deploy-ui": "node deploy-ui.mjs",
     "deploy:prod": "npm run lint && npm run test && npm run build && ncp appsscript.json dist/appsscript.json && ncp .clasp-prod.json .clasp.json && npm run build-ui && npm run deploy-ui && clasp push",
     "serve-ui": "cd src/ui && ng serve",
