@@ -3,16 +3,30 @@
   "version": "1.0.0",
   "description": "A Google Apps Script (GAS) tool to edit the conference data URI of a Google Calendar event.",
   "scripts": {
-    "build": "tsc && cp src/appsscript.json dist/appsscript.json && cp src/index.html dist/index.html",
+    "build:gas": "tsc",
+    "build:angular": "ng build gcal-conference-editor-ng",
+    "build:inline": "node inline-build.js",
+    "build": "npm run build:gas && npm run build:angular && npm run build:inline && cp src/appsscript.json dist/appsscript.json",
     "push": "clasp push",
     "deploy": "npm run build && clasp push"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "prompts": "^2.4.2"
+    "@angular/common": "^20.1.7",
+    "@angular/compiler": "^20.1.7",
+    "@angular/core": "^20.1.7",
+    "@angular/forms": "^20.1.7",
+    "@angular/platform-browser": "^20.1.7",
+    "@angular/platform-browser-dynamic": "^20.1.7",
+    "prompts": "^2.4.2",
+    "rxjs": "^7.8.2",
+    "zone.js": "^0.15.1"
   },
   "devDependencies": {
+    "@angular-devkit/build-angular": "^20.1.6",
+    "@angular/cli": "^20.1.6",
+    "@angular/compiler-cli": "^20.1.7",
     "@google/clasp": "^2.4.2",
     "@types/google-apps-script": "^1.0.83",
     "typescript": "^5.4.5"

@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "gcal-conference-editor-ng": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "angular-app",
+      "sourceRoot": "angular-app/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/angular-build",
+            "index": "angular-app/src/index.html",
+            "main": "angular-app/src/main.ts",
+            "tsConfig": "angular-app/tsconfig.app.json",
+            "assets": [],
+            "styles": [
+              "angular-app/src/styles.css"
+            ],
+            "scripts": [],
+            "polyfills": [
+              "zone.js"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [],
+              "fileReplacements": [],
+              "outputHashing": "none"
+            }
+          },
+          "defaultConfiguration": "production"
+        }
+      }
+    }
+  }
+}

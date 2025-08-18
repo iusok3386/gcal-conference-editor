@@ -1,0 +1,13 @@
+<h1>Google カレンダー 会議情報編集ツール (Angular版)</h1>
+
+<div>
+  <h2>Status: {{ status }}</h2>
+  <div *ngIf="calendars.length > 0">
+    <h3>Available Calendars:</h3>
+    <ul>
+      <li *ngFor="let calendar of calendars">
+        {{ calendar.summary }} (ID: {{ calendar.id }})
+      </li>
+    </ul>
+  </div>
+</div>
