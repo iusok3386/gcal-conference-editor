@@ -20,6 +20,7 @@
     #status { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
     .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .warning-text { font-size: 12px; color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; padding: 8px; border-radius: 4px; margin-top: 5px; }
     .loader {
       border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db;
       width: 16px; height: 16px; animation: spin 2s linear infinite;
@@ -70,6 +71,7 @@
         <div>
           <label for="iconUri">アイコン URI:</label>
           <input type="url" id="iconUri" name="iconUri">
+          <p id="icon-uri-warning" class="warning-text hidden">警告: このホスト名の画像は、Googleカレンダーで正しく表示されない可能性があります。</p>
           <img id="icon-preview" src="" alt="Icon Preview">
           <a id="icon-link" href="#" target="_blank" style="display: none; margin-left: 10px;">リンクを確認</a>
         </div>
@@ -147,6 +149,13 @@
     const entryPointTemplate = document.getElementById('entry-point-template');
 
     let currentMode = 'FORM'; // 'FORM' or 'JSON'
+    const ALLOWED_ICON_HOSTNAMES = [
+        'fonts.gstatic.com',
+        'lh3.googleusercontent.com',
+        'lh4.googleusercontent.com',
+        'lh5.googleusercontent.com',
+        'lh6.googleusercontent.com'
+    ];
 
     // --- Utility Functions ---
     function populateSelect(select, items, defaultOptionText) {
@@ -172,6 +181,18 @@
       } catch (_) {
         return false;
       }
+    }
+
+    function validateIconHost(iconUrl) {
+        if (!iconUrl || !isValidUrl(iconUrl)) {
+            return true; // Don't validate if it's empty or not a URL
+        }
+        try {
+            const hostname = new URL(iconUrl).hostname;
+            return ALLOWED_ICON_HOSTNAMES.includes(hostname);
+        } catch (e) {
+            return false;
+        }
     }
 
     function runGoogleScript(funcName, ...args) {
@@ -247,14 +268,23 @@
         const iconUriInput = document.getElementById('iconUri');
         const iconPreview = document.getElementById('icon-preview');
         const iconLink = document.getElementById('icon-link');
-        if (isValidUrl(iconUriInput.value)) {
-            iconPreview.src = iconUriInput.value;
+        const warning = document.getElementById('icon-uri-warning');
+
+        const url = iconUriInput.value;
+        if (isValidUrl(url)) {
+            iconPreview.src = url;
             iconPreview.style.display = 'inline-block';
-            iconLink.href = iconUriInput.value;
+            iconLink.href = url;
             iconLink.style.display = 'inline-block';
         } else {
             iconPreview.style.display = 'none';
             iconLink.style.display = 'none';
+        }
+
+        if (url && !validateIconHost(url)) {
+            warning.classList.remove('hidden');
+        } else {
+            warning.classList.add('hidden');
         }
     }
 
@@ -365,9 +395,15 @@
           conferenceData = buildConferenceDataFromForm();
       }
 
-      // Simple validation
+      // --- Validation ---
+      const iconUri = conferenceData?.conferenceSolution?.iconUri;
+      if (!validateIconHost(iconUri)) {
+          setStatus('アイコンURIのホスト名が許可されていません。警告を確認してください。', true);
+          return;
+      }
+
       let allUrlsValid = true;
-      if (conferenceData?.conferenceSolution?.iconUri && !isValidUrl(conferenceData.conferenceSolution.iconUri)) {
+      if (iconUri && !isValidUrl(iconUri)) {
           allUrlsValid = false;
       }
       conferenceData?.entryPoints?.forEach(ep => {
