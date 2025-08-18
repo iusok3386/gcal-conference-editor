@@ -75,7 +75,7 @@ function updateConferenceData(calendarId: string, eventId: string, conferenceDat
     // patch リクエストのリソースを作成します。
     const resource: GoogleAppsScript.Calendar.Schema.Event = {
       // @ts-ignore According to API docs, null should be used to clear the field, but the type definition expects undefined.
-      conferenceData: conferenceData
+      conferenceData: conferenceData as any
     };
 
     // イベントにパッチを適用します。
