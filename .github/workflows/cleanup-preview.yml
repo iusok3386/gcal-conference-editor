@@ -63,8 +63,8 @@ jobs:
         if: steps.extract_deployment_id.outputs.deployment_id != ''
         run: |
           deployment_id="${{ steps.extract_deployment_id.outputs.deployment_id }}"
-          echo "Deleting deployment $deployment_id..."
-          npx clasp delete-deployment "$deployment_id"
+          echo "Undeploying deployment $deployment_id..."
+          npx clasp undeploy "$deployment_id"
 
       - name: Delete deployment comment
         if: steps.find_comment.outputs.comment-id != ''
