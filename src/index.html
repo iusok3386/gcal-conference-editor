@@ -31,7 +31,7 @@
     .entry-point { border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-top: 10px; }
     .entry-point div { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
     .entry-point .remove-entry-point { background-color: #db4437; align-self: flex-end; }
-    #icon-preview { max-width: 24px; max-height: 24px; vertical-align: middle; margin-left: 10px; display: none; }
+    #icon-preview, .verify-uri-link { max-width: 24px; max-height: 24px; vertical-align: middle; margin-left: 10px; }
     hr { border: 0; border-top: 1px solid #ccc; margin: 20px 0; }
     .button-group { display: flex; gap: 10px; }
     .hidden { display: none !important; }
@@ -75,8 +75,7 @@
           <input type="url" id="iconUri" name="iconUri" placeholder="https://fonts.gstatic.com/s/i/productlogos/youtube_color_64dp.png">
           <p id="icon-uri-warning" class="warning-text hidden">警告: このホスト名の画像は、Googleカレンダーで正しく表示されない可能性があります。</p>
           <p class="description">サービスを表すアイコン画像のURL。許可されたホスト上の画像のみ有効です。</p>
-          <img id="icon-preview" src="" alt="Icon Preview">
-          <a id="icon-link" href="#" target="_blank" style="display: none; margin-left: 10px;">リンクを確認</a>
+          <img id="icon-preview" src="" alt="Icon Preview" class="hidden">
         </div>
         <div>
           <label for="type">キータイプ</label>
@@ -137,6 +136,7 @@
       <div>
         <label>URI</label>
         <input type="url" class="uri">
+        <a class="verify-uri-link hidden" href="#" target="_blank">リンクを確認</a>
         <p class="uri-validation-error warning-text hidden">URIの形式が正しくありません。</p>
         <p class="description">会議に参加するためのURLです。</p>
       </div>
@@ -209,9 +209,9 @@
     }
 
     function validateEntryPointUri(uri, type) {
-        if (!uri || !isValidUrl(uri)) return true;
+        if (!uri) return true;
         const config = ENTRY_POINT_CONFIG[type];
-        if (!config) return true; // Should not happen
+        if (!config) return true;
         try {
             const url = new URL(uri);
             return config.requiredSchema.includes(url.protocol);
@@ -253,6 +253,7 @@
         const uriInput = entryPointDiv.querySelector('.uri');
         const labelWrapper = entryPointDiv.querySelector('.label-wrapper');
         const uriError = entryPointDiv.querySelector('.uri-validation-error');
+        const verifyLink = entryPointDiv.querySelector('.verify-uri-link');
 
         const config = ENTRY_POINT_CONFIG[type];
         if (!config) return;
@@ -267,10 +268,18 @@
             labelWrapper.classList.remove('hidden');
         }
 
-        const isValid = validateEntryPointUri(uriInput.value, type);
+        const uri = uriInput.value;
+        const isValid = validateEntryPointUri(uri, type);
         uriError.classList.toggle('hidden', isValid);
         if(!isValid) {
             uriError.textContent = `URIは ${config.requiredSchema.join(' または ')} で始まる必要があります。`;
+        }
+
+        if (isValid && uri) {
+            verifyLink.href = uri;
+            verifyLink.classList.remove('hidden');
+        } else {
+            verifyLink.classList.add('hidden');
         }
     }
 
@@ -317,18 +326,14 @@
     function updateIconPreview() {
         const iconUriInput = document.getElementById('iconUri');
         const iconPreview = document.getElementById('icon-preview');
-        const iconLink = document.getElementById('icon-link');
         const warning = document.getElementById('icon-uri-warning');
 
         const url = iconUriInput.value;
         if (isValidUrl(url)) {
             iconPreview.src = url;
-            iconPreview.style.display = 'inline-block';
-            iconLink.href = url;
-            iconLink.style.display = 'inline-block';
+            iconPreview.classList.remove('hidden');
         } else {
-            iconPreview.style.display = 'none';
-            iconLink.style.display = 'none';
+            iconPreview.classList.add('hidden');
         }
 
         warning.classList.toggle('hidden', validateIconHost(url));
