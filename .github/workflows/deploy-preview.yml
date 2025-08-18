@@ -51,15 +51,15 @@ jobs:
         env:
           COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
         run: |
-          # Use grep and sed for robust parsing, avoiding bash regex issues.
-          id_line=$(echo "$COMMENT_BODY" | grep '<!-- DEPLOYMENT_ID:')
-          if [[ -n "$id_line" ]]; then
+          # Use an `if` statement to handle grep's non-zero exit code when no match is found.
+          if id_line=$(echo "$COMMENT_BODY" | grep '<!-- DEPLOYMENT_ID:'); then
+            echo "Found line with deployment ID."
             deployment_id=$(echo "$id_line" | sed -n 's/.*<!-- DEPLOYMENT_ID: \(.*\) -->.*/\1/p')
             if [[ -n "$deployment_id" ]]; then
               echo "Found existing deployment ID: $deployment_id"
               echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
             else
-              echo "Could not extract deployment ID with sed."
+              echo "Line found, but could not extract ID with sed."
               echo "deployment_id=" >> "$GITHUB_OUTPUT"
             fi
           else
