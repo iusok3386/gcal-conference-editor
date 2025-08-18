@@ -23,12 +23,33 @@ type ConferenceData = GoogleAppsScript.Calendar.Schema.ConferenceData;
 
 
 /**
- * Web アプリの HTML を提供します。
- * @returns {GoogleAppsScript.HTML.HtmlOutput} レンダリングされる HTML 出力。
+ * @fileoverview This file serves the main HTML file for the web app and
+ * includes a utility function for templating.
+ */
+
+/**
+ * Includes the content of another file in the current HTML template.
+ * This function is used in scriptlets (<%!= ... %>) to include JavaScript
+ * and CSS files that are compiled by the `deploy-ui` script.
+ *
+ * @param {string} filename The name of the file to include. The file should
+ *     be in the `dist` directory.
+ * @returns {string} The content of the file.
+ */
+function include(filename: string): string {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
+ * Serves the main HTML file for the web application.
+ * This function is called when a user visits the web app URL.
+ *
+ * @returns {GoogleAppsScript.HTML.HtmlOutput} The HTML output to be rendered.
  */
 function doGet(): GoogleAppsScript.HTML.HtmlOutput {
-  return HtmlService.createHtmlOutputFromFile('index.html')
-      .setTitle('Google カレンダー 会議 URL 編集ツール');
+  return HtmlService.createTemplateFromFile('ui.html')
+    .evaluate()
+    .setTitle('Google Calendar Conference Editor');
 }
 
 /**
