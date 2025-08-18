@@ -1,0 +1,142 @@
+<h1>Google カレンダー 会議情報編集ツール</h1>
+<p>カレンダーとイベントを選択して、会議情報を編集します。</p>
+
+<div class="selection-container">
+  <mat-form-field>
+    <mat-label>1. カレンダーを選択:</mat-label>
+    <mat-select [(ngModel)]="selectedCalendarId" (selectionChange)="onCalendarChange()" [disabled]="isLoadingCalendars">
+      <mat-option *ngIf="isLoadingCalendars" [disabled]="true">
+        <mat-spinner diameter="20"></mat-spinner> カレンダーを読み込み中...
+      </mat-option>
+      <mat-option *ngFor="let calendar of calendars" [value]="calendar.id">
+        {{ calendar.summary }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>2. イベントを選択:</mat-label>
+    <mat-select [(ngModel)]="selectedEventId" (selectionChange)="onEventChange()" [disabled]="!selectedCalendarId || isLoadingEvents">
+      <mat-option *ngIf="isLoadingEvents" [disabled]="true">
+        <mat-spinner diameter="20"></mat-spinner> イベントを読み込み中...
+      </mat-option>
+      <mat-option *ngIf="!isLoadingEvents && events.length === 0 && selectedCalendarId" [disabled]="true">
+        イベントが見つかりません
+      </mat-option>
+      <mat-option *ngIf="!selectedCalendarId" [disabled]="true">
+        カレンダーを選択してください
+      </mat-option>
+      <mat-option *ngFor="let event of events" [value]="event.id">
+        {{ event.summary }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+
+<div *ngIf="isLoadingConferenceData" style="display: flex; justify-content: center; padding: 20px;">
+  <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+</div>
+
+<div *ngIf="editorVisible && !isLoadingConferenceData">
+  <hr>
+  <form [formGroup]="conferenceForm" (ngSubmit)="onSubmit()">
+    <mat-tab-group (selectedIndexChange)="onTabChange($event)">
+      <mat-tab label="フォーム編集">
+        <div class="form-section">
+          <h3>会議ソリューション</h3>
+          <div formGroupName="conferenceSolution">
+            <mat-form-field>
+              <mat-label>名前</mat-label>
+              <input matInput formControlName="name" placeholder="YouTube Live">
+            </mat-form-field>
+            <p class="description">会議ソリューションのサービス名です。(例: Google Meet, Zoom)</p>
+
+            <mat-form-field>
+              <mat-label>アイコン URI</mat-label>
+              <input matInput formControlName="iconUri" placeholder="https://fonts.gstatic.com/s/i/productlogos/youtube_color_64dp.png">
+            </mat-form-field>
+            <p class="description">サービスを表すアイコン画像のURL。許可されたホスト上の画像のみ有効です。</p>
+
+            <div formGroupName="key">
+              <mat-form-field>
+                <mat-label>キータイプ</mat-label>
+                <mat-select formControlName="type">
+                  <mat-option value="addOn">addOn</mat-option>
+                  <mat-option value="hangoutsMeet">hangoutsMeet</mat-option>
+                  <mat-option value="eventHangout">eventHangout</mat-option>
+                  <mat-option value="eventNamedHangout">eventNamedHangout</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <p class="description">会議ソリューションの種類。Google Meet以外は通常 `addOn` を選択します。</p>
+            </div>
+          </div>
+
+          <mat-form-field>
+            <mat-label>会議 ID</mat-label>
+            <input matInput formControlName="conferenceId" placeholder="dQw4w9WgXcQ">
+          </mat-form-field>
+          <p class="description">この会議を識別するための一意のIDです。(例: YouTubeの動画ID)</p>
+
+          <mat-form-field>
+            <mat-label>メモ</mat-label>
+            <textarea matInput formControlName="notes" rows="4" placeholder="この会議は録画されます。"></textarea>
+          </mat-form-field>
+          <p class="description">会議に関する追加情報や説明です。HTMLタグも使用できます。</p>
+
+          <h3>エントリーポイント</h3>
+          <div formArrayName="entryPoints">
+            <div *ngFor="let entryPoint of entryPoints.controls; let i=index" [formGroupName]="i" class="entry-point">
+              <mat-form-field>
+                <mat-label>タイプ</mat-label>
+                <mat-select formControlName="entryPointType">
+                  <mat-option value="video">video</mat-option>
+                  <mat-option value="phone">phone</mat-option>
+                  <mat-option value="sip">sip</mat-option>
+                  <mat-option value="more">more</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field>
+                <mat-label>ラベル</mat-label>
+                <input matInput formControlName="label">
+              </mat-form-field>
+
+              <mat-form-field>
+                <mat-label>URI</mat-label>
+                <input matInput formControlName="uri">
+              </mat-form-field>
+
+              <button mat-icon-button color="warn" (click)="removeEntryPoint(i)" type="button">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+          <button mat-stroked-button color="primary" (click)="addEntryPoint()" type="button">エントリーポイントを追加</button>
+        </div>
+        <div class="button-group">
+            <button mat-raised-button color="primary" type="submit" [disabled]="isSubmitting">
+                <mat-spinner *ngIf="isSubmitting" diameter="20"></mat-spinner>
+                <span *ngIf="!isSubmitting">会議情報を更新</span>
+            </button>
+            <button mat-raised-button color="warn" (click)="onDelete()" type="button" [disabled]="isSubmitting">会議情報を削除</button>
+        </div>
+      </mat-tab>
+      <mat-tab label="JSON編集">
+        <div class="form-section">
+          <h3>JSONエディタ</h3>
+          <mat-form-field>
+            <mat-label>JSON</mat-label>
+            <textarea matInput rows="15" [(ngModel)]="jsonEditorValue" [ngModelOptions]="{standalone: true}"></textarea>
+          </mat-form-field>
+        </div>
+        <div class="button-group">
+            <button mat-raised-button color="primary" (click)="onSubmit(false)" [disabled]="isSubmitting">
+                <mat-spinner *ngIf="isSubmitting" diameter="20"></mat-spinner>
+                <span *ngIf="!isSubmitting">会議情報を更新</span>
+            </button>
+            <button mat-raised-button color="warn" (click)="onDelete()" type="button" [disabled]="isSubmitting">会議情報を削除</button>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </form>
+</div>

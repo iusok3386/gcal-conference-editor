@@ -1,11 +1,14 @@
 # Ignore clasp credentials
 .clasprc.json
-
 # Ignore environment-specific clasp config
 .clasp.json
-
 # Ignore node dependencies
 node_modules/
-
 # Ignore build output
 dist/
+node_modules
+build/
+.DS_Store
+.clasp*.json
+*.tgz
+.vscode/
