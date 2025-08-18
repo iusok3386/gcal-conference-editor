@@ -1,3 +1,18 @@
+<!--
+Copyright 2025 ita.kosu55
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 # gcal-conference-editor
 
 Google カレンダーのイベントの会議データ URI を編集するための Google Apps Script (GAS) ツールです。これにより、標準の Google カレンダーインターフェースでは編集できないビデオ会議リンク (Zoom, Teams など) を変更するのに役立ちます。
