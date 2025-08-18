@@ -4,17 +4,18 @@
   <base target="_top">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; max-width: 600px; }
-    form, #selection-container { display: flex; flex-direction: column; gap: 15px; }
+    #selection-container, #conference-form-container, #json-editor-container { display: flex; flex-direction: column; gap: 15px; }
     label { font-weight: bold; }
     input[type="text"], input[type="url"], select, textarea {
       padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;
       box-sizing: border-box; font-size: 14px;
     }
-    textarea { resize: vertical; }
+    textarea { resize: vertical; min-height: 150px; font-family: monospace; }
     button {
       padding: 10px 15px; background-color: #4285F4; color: white; border: none;
       border-radius: 4px; cursor: pointer; font-size: 14px; align-self: flex-start;
     }
+    button.secondary { background-color: #f1f1f1; color: #333; }
     button:disabled { background-color: #aaa; cursor: not-allowed; }
     #status { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
     .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
@@ -31,6 +32,7 @@
     #icon-preview { max-width: 24px; max-height: 24px; vertical-align: middle; margin-left: 10px; display: none; }
     hr { border: 0; border-top: 1px solid #ccc; margin: 20px 0; }
     .button-group { display: flex; gap: 10px; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -53,46 +55,57 @@
     </div>
   </div>
 
-  <form id="conference-form" style="display:none;">
+  <div id="editor-container" class="hidden">
     <hr>
-    <h3>会議ソリューション</h3>
-    <div>
-      <label for="name">名前:</label>
-      <input type="text" id="name" name="name">
-    </div>
-    <div>
-      <label for="iconUri">アイコン URI:</label>
-      <input type="url" id="iconUri" name="iconUri">
-      <img id="icon-preview" src="" alt="Icon Preview">
-      <a id="icon-link" href="#" target="_blank" style="display: none; margin-left: 10px;">リンクを確認</a>
-    </div>
-    <div>
-      <label for="type">キータイプ:</label>
-      <select id="type" name="type">
-        <option value="addOn">addOn</option>
-        <option value="hangoutsMeet">hangoutsMeet</option>
-        <option value="eventHangout">eventHangout</option>
-        <option value="eventNamedHangout">eventNamedHangout</option>
-      </select>
-    </div>
-    <div>
-      <label for="conferenceId">会議 ID:</label>
-      <input type="text" id="conferenceId" name="conferenceId">
-    </div>
-    <div>
-      <label for="notes">メモ:</label>
-      <textarea id="notes" name="notes" rows="4"></textarea>
+    <div class="button-group">
+        <button id="mode-toggle-button" class="secondary">JSONモードに切り替え</button>
     </div>
 
-    <h3>エントリーポイント</h3>
-    <div id="entry-points-container"></div>
-    <button type="button" id="add-entry-point">エントリーポイントを追加</button>
+    <div id="conference-form-container">
+        <h3>会議ソリューション</h3>
+        <div>
+          <label for="name">名前:</label>
+          <input type="text" id="name" name="name">
+        </div>
+        <div>
+          <label for="iconUri">アイコン URI:</label>
+          <input type="url" id="iconUri" name="iconUri">
+          <img id="icon-preview" src="" alt="Icon Preview">
+          <a id="icon-link" href="#" target="_blank" style="display: none; margin-left: 10px;">リンクを確認</a>
+        </div>
+        <div>
+          <label for="type">キータイプ:</label>
+          <select id="type" name="type">
+            <option value="addOn">addOn</option>
+            <option value="hangoutsMeet">hangoutsMeet</option>
+            <option value="eventHangout">eventHangout</option>
+            <option value="eventNamedHangout">eventNamedHangout</option>
+          </select>
+        </div>
+        <div>
+          <label for="conferenceId">会議 ID:</label>
+          <input type="text" id="conferenceId" name="conferenceId">
+        </div>
+        <div>
+          <label for="notes">メモ:</label>
+          <textarea id="notes" name="notes" rows="4"></textarea>
+        </div>
+
+        <h3>エントリーポイント</h3>
+        <div id="entry-points-container"></div>
+        <button type="button" id="add-entry-point">エントリーポイントを追加</button>
+    </div>
+
+    <div id="json-editor-container" class="hidden">
+        <h3>JSONエディタ</h3>
+        <textarea id="json-editor"></textarea>
+    </div>
 
     <div class="button-group">
-      <button type="submit">会議情報を更新</button>
-      <button type="button" id="delete-button" style="background-color: #db4437;">会議情報を削除</button>
+      <button id="submit-button">会議情報を更新</button>
+      <button id="delete-button" style="background-color: #db4437;">会議情報を削除</button>
     </div>
-  </form>
+  </div>
 
   <div id="status"></div>
 
@@ -124,10 +137,16 @@
     const calendarSelect = document.getElementById('calendar-select');
     const eventSelect = document.getElementById('event-select');
     const eventLoader = document.getElementById('event-loader');
-    const conferenceForm = document.getElementById('conference-form');
+    const editorContainer = document.getElementById('editor-container');
+    const conferenceFormContainer = document.getElementById('conference-form-container');
+    const jsonEditorContainer = document.getElementById('json-editor-container');
+    const jsonEditor = document.getElementById('json-editor');
+    const modeToggleButton = document.getElementById('mode-toggle-button');
     const statusDiv = document.getElementById('status');
     const entryPointsContainer = document.getElementById('entry-points-container');
     const entryPointTemplate = document.getElementById('entry-point-template');
+
+    let currentMode = 'FORM'; // 'FORM' or 'JSON'
 
     // --- Utility Functions ---
     function populateSelect(select, items, defaultOptionText) {
@@ -146,6 +165,7 @@
     }
 
     function isValidUrl(string) {
+      if (!string) return true; // Allow empty URLs
       try {
         new URL(string);
         return true;
@@ -163,18 +183,37 @@
       });
     }
 
-    // --- Form Population ---
+    // --- Data Building and Population ---
+    function buildConferenceDataFromForm() {
+        const entryPointElements = entryPointsContainer.querySelectorAll('.entry-point');
+        const entryPoints = [];
+        entryPointElements.forEach(ep => {
+            entryPoints.push({
+            entryPointType: ep.querySelector('.entryPointType').value,
+            label: ep.querySelector('.label').value,
+            uri: ep.querySelector('.uri').value,
+            });
+        });
+
+        return {
+            conferenceId: document.getElementById('conferenceId').value,
+            conferenceSolution: {
+            key: { type: document.getElementById('type').value },
+            name: document.getElementById('name').value,
+            iconUri: document.getElementById('iconUri').value,
+            },
+            notes: document.getElementById('notes').value,
+            entryPoints: entryPoints
+        };
+    }
+
     function addEntryPoint(data = {}) {
       const clone = entryPointTemplate.content.cloneNode(true);
       const entryPointDiv = clone.querySelector('.entry-point');
 
-      const typeSelect = entryPointDiv.querySelector('.entryPointType');
-      const labelInput = entryPointDiv.querySelector('.label');
-      const uriInput = entryPointDiv.querySelector('.uri');
-
-      typeSelect.value = data.entryPointType || 'video';
-      labelInput.value = data.label || '';
-      uriInput.value = data.uri || '';
+      entryPointDiv.querySelector('.entryPointType').value = data.entryPointType || 'video';
+      entryPointDiv.querySelector('.label').value = data.label || '';
+      entryPointDiv.querySelector('.uri').value = data.uri || '';
 
       entryPointDiv.querySelector('.remove-entry-point').addEventListener('click', () => {
         entryPointsContainer.removeChild(entryPointDiv);
@@ -201,7 +240,7 @@
       } else {
         addEntryPoint(); // Add one blank entry point if none exist
       }
-      conferenceForm.style.display = 'flex';
+      editorContainer.classList.remove('hidden');
     }
 
     function updateIconPreview() {
@@ -219,6 +258,35 @@
         }
     }
 
+    // --- Mode Toggling ---
+    function toggleMode() {
+        if (currentMode === 'FORM') {
+            // Switch to JSON mode
+            try {
+                const data = buildConferenceDataFromForm();
+                jsonEditor.value = JSON.stringify(data, null, 2);
+                currentMode = 'JSON';
+                conferenceFormContainer.classList.add('hidden');
+                jsonEditorContainer.classList.remove('hidden');
+                modeToggleButton.textContent = 'フォームモードに切り替え';
+            } catch (err) {
+                setStatus('フォームからJSONへの変換に失敗しました: ' + err.message, true);
+            }
+        } else {
+            // Switch to FORM mode
+            try {
+                const data = JSON.parse(jsonEditor.value);
+                populateForm(data); // This repopulates the form with the JSON content
+                currentMode = 'FORM';
+                jsonEditorContainer.classList.add('hidden');
+                conferenceFormContainer.classList.remove('hidden');
+                modeToggleButton.textContent = 'JSONモードに切り替え';
+            } catch (err) {
+                setStatus('JSONのパースに失敗しました。フォーマットを確認してください。: ' + err.message, true);
+            }
+        }
+    }
+
     // --- Event Listeners ---
     window.addEventListener('load', async () => {
       try {
@@ -229,8 +297,7 @@
           calendarSelect.innerHTML = '<option value="">利用可能なカレンダーがありません</option>';
         }
       } catch (err) {
-        calendarSelect.innerHTML = `<option value="">カレンダーの読み込みに失敗</option>`;
-        setStatus(err.message, true);
+        setStatus('カレンダーの読み込みに失敗: ' + err.message, true);
       }
     });
 
@@ -239,7 +306,7 @@
       if (!calendarId) return;
 
       eventSelect.disabled = true;
-      conferenceForm.style.display = 'none';
+      editorContainer.classList.add('hidden');
       eventSelect.innerHTML = '<option value="">イベントを読み込み中...</option>';
       eventLoader.style.display = 'inline-block';
 
@@ -251,8 +318,7 @@
           eventSelect.innerHTML = '<option value="">イベントが見つかりません</option>';
         }
       } catch (err) {
-        eventSelect.innerHTML = `<option value="">イベントの読み込みに失敗</option>`;
-        setStatus(err.message, true);
+        setStatus('イベントの読み込みに失敗: ' + err.message, true);
       } finally {
         eventLoader.style.display = 'none';
       }
@@ -262,7 +328,7 @@
       const eventId = eventSelect.value;
       const calendarId = calendarSelect.value;
       if (!eventId || !calendarId) {
-        conferenceForm.style.display = 'none';
+        editorContainer.classList.add('hidden');
         return;
       }
 
@@ -273,50 +339,40 @@
         statusDiv.style.display = 'none';
       } catch (err) {
         setStatus('会議情報の読み込みに失敗しました: ' + err.message, true);
-        conferenceForm.style.display = 'none';
+        editorContainer.classList.add('hidden');
       }
     });
 
     document.getElementById('iconUri').addEventListener('input', updateIconPreview);
     document.getElementById('add-entry-point').addEventListener('click', () => addEntryPoint());
+    modeToggleButton.addEventListener('click', toggleMode);
 
-    conferenceForm.addEventListener('submit', async (e) => {
+    document.getElementById('submit-button').addEventListener('click', async (e) => {
       e.preventDefault();
 
       const calendarId = calendarSelect.value;
       const eventId = eventSelect.value;
+      let conferenceData;
 
-      // --- Build ConferenceData Object ---
-      const conferenceData = {
-        conferenceId: document.getElementById('conferenceId').value,
-        conferenceSolution: {
-          key: { type: document.getElementById('type').value },
-          name: document.getElementById('name').value,
-          iconUri: document.getElementById('iconUri').value,
-        },
-        notes: document.getElementById('notes').value,
-        entryPoints: []
-      };
-
-      // --- Validate and Build Entry Points ---
-      const entryPointElements = entryPointsContainer.querySelectorAll('.entry-point');
-      let allUrlsValid = true;
-      if (conferenceData.conferenceSolution.iconUri && !isValidUrl(conferenceData.conferenceSolution.iconUri)) {
-          allUrlsValid = false;
+      if (currentMode === 'JSON') {
+          try {
+              conferenceData = JSON.parse(jsonEditor.value);
+          } catch (err) {
+              setStatus('JSONのフォーマットが不正です。修正してください。: ' + err.message, true);
+              return;
+          }
+      } else {
+          conferenceData = buildConferenceDataFromForm();
       }
 
-      entryPointElements.forEach(ep => {
-        const uri = ep.querySelector('.uri').value;
-        if (uri && !isValidUrl(uri)) {
-            allUrlsValid = false;
-        }
-        conferenceData.entryPoints.push({
-          entryPointType: ep.querySelector('.entryPointType').value,
-          label: ep.querySelector('.label').value,
-          uri: uri,
-        });
+      // Simple validation
+      let allUrlsValid = true;
+      if (conferenceData?.conferenceSolution?.iconUri && !isValidUrl(conferenceData.conferenceSolution.iconUri)) {
+          allUrlsValid = false;
+      }
+      conferenceData?.entryPoints?.forEach(ep => {
+        if (ep.uri && !isValidUrl(ep.uri)) allUrlsValid = false;
       });
-
       if (!allUrlsValid) {
           setStatus('無効なURLが含まれています。修正してください。', true);
           return;
@@ -341,7 +397,7 @@
             const response = await runGoogleScript('updateConferenceData', calendarId, eventId, null);
             setStatus(response.message, !response.success);
             if(response.success) {
-                populateForm(null); // Clear the form
+                populateForm(null);
             }
         } catch (err) {
             setStatus('削除に失敗しました: ' + err.message, true);
