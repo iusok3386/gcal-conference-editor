@@ -31,7 +31,6 @@
     #icon-preview { max-width: 24px; max-height: 24px; vertical-align: middle; margin-left: 10px; display: none; }
     hr { border: 0; border-top: 1px solid #ccc; margin: 20px 0; }
     .button-group { display: flex; gap: 10px; }
-    pre { background-color: #f4f4f4; border: 1px solid #ddd; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
   </style>
 </head>
 <body>
@@ -97,11 +96,6 @@
 
   <div id="status"></div>
 
-  <div id="payload-container" style="display:none; margin-top: 15px;">
-    <h4>送信するリクエスト:</h4>
-    <pre><code id="request-payload"></code></pre>
-  </div>
-
   <template id="entry-point-template">
     <div class="entry-point">
       <div>
@@ -134,8 +128,6 @@
     const statusDiv = document.getElementById('status');
     const entryPointsContainer = document.getElementById('entry-points-container');
     const entryPointTemplate = document.getElementById('entry-point-template');
-    const payloadContainer = document.getElementById('payload-container');
-    const requestPayload = document.getElementById('request-payload');
 
     // --- Utility Functions ---
     function populateSelect(select, items, defaultOptionText) {
@@ -275,7 +267,6 @@
       }
 
       setStatus('会議情報を読み込み中...', false, true);
-      payloadContainer.style.display = 'none';
       try {
         const confData = await runGoogleScript('getConferenceData', calendarId, eventId);
         populateForm(confData);
@@ -330,10 +321,6 @@
           setStatus('無効なURLが含まれています。修正してください。', true);
           return;
       }
-
-      // Display the request payload for debugging
-      payloadContainer.style.display = 'block';
-      requestPayload.textContent = JSON.stringify(conferenceData, null, 2);
 
       setStatus('会議情報を更新中...', false, true);
       try {
