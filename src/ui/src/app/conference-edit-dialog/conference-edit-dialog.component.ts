@@ -1,26 +1,22 @@
-/**
- * Copyright 2025 ita.kosu55
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 /// <reference types="google-apps-script" />
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatTabsModule } from '@angular/material/tabs';
+import {
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { debounceTime, filter } from 'rxjs';
 
 @Component({
   selector: 'app-conference-edit-dialog',
@@ -32,57 +28,119 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatTabsModule,
   ],
   templateUrl: './conference-edit-dialog.component.html',
 })
-export class ConferenceEditDialogComponent {
+export class ConferenceEditDialogComponent implements OnInit {
   form = new FormGroup({
     conferenceId: new FormControl(''),
     name: new FormControl('', Validators.required),
     iconUri: new FormControl(''),
     entryPointUri: new FormControl('', Validators.required),
     entryPointLabel: new FormControl(''),
+    json: new FormControl(''),
   });
 
   dialogRef = inject(MatDialogRef<ConferenceEditDialogComponent>);
-  data: { event: GoogleAppsScript.Calendar.Schema.Event } = inject(MAT_DIALOG_DATA);
+  data: { event: GoogleAppsScript.Calendar.Schema.Event } =
+    inject(MAT_DIALOG_DATA);
+
+  private isUpdating = false;
 
   constructor() {
     if (this.data.event.conferenceData) {
+      const conf = this.data.event.conferenceData;
       this.form.patchValue({
-        conferenceId: this.data.event.conferenceData.conferenceId,
-        name: this.data.event.conferenceData.conferenceSolution?.name,
-        iconUri: this.data.event.conferenceData.conferenceSolution?.iconUri,
-        entryPointUri: this.data.event.conferenceData.entryPoints?.[0]?.uri,
-        entryPointLabel: this.data.event.conferenceData.entryPoints?.[0]?.label,
+        conferenceId: conf.conferenceId,
+        name: conf.conferenceSolution?.name,
+        iconUri: conf.conferenceSolution?.iconUri,
+        entryPointUri: conf.entryPoints?.[0]?.uri,
+        entryPointLabel: conf.entryPoints?.[0]?.label,
       });
     }
   }
 
+  ngOnInit(): void {
+    this.updateJsonFromForm();
+
+    this.form.valueChanges
+      .pipe(
+        debounceTime(300),
+        filter(() => !this.isUpdating)
+      )
+      .subscribe(() => {
+        this.updateJsonFromForm();
+      });
+  }
+
+  updateJsonFromForm(): void {
+    this.isUpdating = true;
+    const conferenceData = this.buildConferenceDataFromForm();
+    this.form.controls.json.setValue(
+      JSON.stringify(conferenceData, null, 2)
+    );
+    this.isUpdating = false;
+  }
+
+  updateFormFromJson(): void {
+    try {
+      this.isUpdating = true;
+      const jsonValue = this.form.controls.json.value;
+      if (jsonValue) {
+        const conferenceData: GoogleAppsScript.Calendar.Schema.ConferenceData =
+          JSON.parse(jsonValue);
+        this.form.patchValue({
+          conferenceId: conferenceData.conferenceId,
+          name: conferenceData.conferenceSolution?.name,
+          iconUri: conferenceData.conferenceSolution?.iconUri,
+          entryPointUri: conferenceData.entryPoints?.[0]?.uri,
+          entryPointLabel: conferenceData.entryPoints?.[0]?.label,
+        });
+      }
+      this.isUpdating = false;
+    } catch (e) {
+      // Invalid JSON, do nothing
+      this.isUpdating = false;
+    }
+  }
+
+  buildConferenceDataFromForm(): GoogleAppsScript.Calendar.Schema.ConferenceData {
+    return {
+      createRequest: {
+        requestId: `${Date.now()}`,
+        conferenceSolutionKey: {
+          type: 'addOn',
+        },
+      },
+      conferenceId: this.form.value.conferenceId ?? undefined,
+      conferenceSolution: {
+        name: this.form.value.name ?? '',
+        iconUri: this.form.value.iconUri ?? undefined,
+        key: { type: 'addOn' },
+      },
+      entryPoints: [
+        {
+          entryPointType: 'video',
+          uri: this.form.value.entryPointUri ?? undefined,
+          label: this.form.value.entryPointLabel ?? undefined,
+        },
+      ],
+    };
+  }
+
   onSave(): void {
-    if (this.form.valid) {
-      const conferenceData: GoogleAppsScript.Calendar.Schema.ConferenceData = {
-        createRequest: {
-          requestId: `${Date.now()}`,
-          conferenceSolutionKey: {
-            type: 'addOn',
-          },
-        },
-        conferenceId: this.form.value.conferenceId ?? undefined,
-        conferenceSolution: {
-          name: this.form.value.name ?? '',
-          iconUri: this.form.value.iconUri ?? undefined,
-          key: { type: 'addOn' },
-        },
-        entryPoints: [
-          {
-            entryPointType: 'video',
-            uri: this.form.value.entryPointUri ?? undefined,
-            label: this.form.value.entryPointLabel ?? undefined,
-          },
-        ],
-      };
-      this.dialogRef.close(conferenceData);
+    try {
+      const jsonValue = this.form.controls.json.value;
+      if (jsonValue) {
+        const conferenceData: GoogleAppsScript.Calendar.Schema.ConferenceData =
+          JSON.parse(jsonValue);
+        this.dialogRef.close(conferenceData);
+      }
+    } catch (e) {
+      // Should not happen if JSON is kept valid, but as a safeguard.
+      console.error('Invalid JSON in text area', e);
+      // Maybe show an error to the user in a real app
     }
   }
 

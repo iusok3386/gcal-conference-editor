@@ -1,45 +1,55 @@
-<!--
-Copyright 2025 ita.kosu55
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
 <h1 mat-dialog-title>Edit Conference Data for {{ data.event.summary }}</h1>
 <div mat-dialog-content [formGroup]="form">
-  <mat-form-field>
-    <mat-label>Service Name</mat-label>
-    <input matInput formControlName="name" required />
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>Service Icon URL</mat-label>
-    <input matInput formControlName="iconUri" />
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>Entry Point URL</mat-label>
-    <input matInput formControlName="entryPointUri" required />
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>Entry Point Label</mat-label>
-    <input matInput formControlName="entryPointLabel" />
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>Conference ID</mat-label>
-    <input matInput formControlName="conferenceId" />
-  </mat-form-field>
+  <mat-tab-group>
+    <mat-tab label="Form">
+      <div class="tab-content">
+        <mat-form-field>
+          <mat-label>Service Name</mat-label>
+          <input matInput formControlName="name" required />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Service Icon URL</mat-label>
+          <input matInput formControlName="iconUri" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Entry Point URL</mat-label>
+          <input matInput formControlName="entryPointUri" required />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Entry Point Label</mat-label>
+          <input matInput formControlName="entryPointLabel" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Conference ID</mat-label>
+          <input matInput formControlName="conferenceId" />
+        </mat-form-field>
+      </div>
+    </mat-tab>
+    <mat-tab label="JSON">
+      <div class="tab-content">
+        <mat-form-field class="json-textarea">
+          <mat-label>ConferenceData JSON</mat-label>
+          <textarea
+            matInput
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            formControlName="json"
+            (input)="updateFormFromJson()"
+          ></textarea>
+        </mat-form-field>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>
 <div mat-dialog-actions>
   <button mat-button (click)="onCancel()">Cancel</button>
   <button mat-button color="warn" (click)="onDelete()">Delete Conference</button>
-  <button mat-flat-button color="primary" (click)="onSave()" [disabled]="!form.valid">
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="onSave()"
+    [disabled]="!form.valid"
+  >
     Save
   </button>
 </div>
