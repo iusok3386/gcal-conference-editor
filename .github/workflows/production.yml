@@ -1,8 +1,9 @@
 name: Production Deployment
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
 
 permissions:
   deployments: write
