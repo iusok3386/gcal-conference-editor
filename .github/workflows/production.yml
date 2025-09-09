@@ -16,8 +16,8 @@ jobs:
     env:
       NODE_VERSION: '22'
       CLASP_RC: ${{ secrets.CLASP_RC }}
-      CLASP_JSON: ${{ secrets.CLASP_PROD_JSON }}
-      PROD_DEPLOYMENT_ID: ${{ secrets.PROD_DEPLOYMENT_ID }}
+      CLASP_JSON: ${{ vars.CLASP_PROD_JSON }}
+      PROD_DEPLOYMENT_ID: ${{ vars.PROD_DEPLOYMENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

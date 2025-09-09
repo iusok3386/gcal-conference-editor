@@ -18,7 +18,7 @@ jobs:
     env:
       NODE_VERSION: '22'
       CLASP_RC: ${{ secrets.CLASP_RC }}
-      CLASP_JSON: ${{ secrets.CLASP_DEV_JSON }}
+      CLASP_JSON: ${{ vars.CLASP_DEV_JSON }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -129,7 +129,7 @@ jobs:
       - name: Setup clasp
         env:
           CLASP_RC: ${{ secrets.CLASP_RC }}
-          CLASP_JSON: ${{ secrets.CLASP_DEV_JSON }}
+          CLASP_JSON: ${{ vars.CLASP_DEV_JSON }}
         run: |
           echo "$CLASP_RC" > ~/.clasprc.json
           echo "$CLASP_JSON" > ./.clasp.json
