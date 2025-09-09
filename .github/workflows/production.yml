@@ -1,8 +1,9 @@
 name: Production Deployment
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
 
 permissions:
   deployments: write
@@ -18,7 +19,6 @@ jobs:
       CLASP_RC: ${{ secrets.CLASP_RC }}
       CLASP_JSON: ${{ secrets.CLASP_PROD_JSON }}
       PROD_DEPLOYMENT_ID: ${{ secrets.PROD_DEPLOYMENT_ID }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,22 +44,6 @@ jobs:
           node deploy-ui.mjs
           npx @google/clasp push -f
 
-      - name: Start GitHub Deployment
-        run: |
-          deployment=$(gh api repos/${{ github.repository }}/deployments \
-            -f "ref=${{ github.ref }}" \
-            -f "environment=production" \
-            -f "required_contexts=[]" \
-            --jq '.id')
-          echo "DEPLOYMENT_ID=$deployment" >> $GITHUB_ENV
-
-      - name: Set GitHub Deployment Status (in_progress)
-        run: >
-          gh api repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses
-          -f "state=in_progress"
-          -f "log_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          -f "environment_url="
-
       - name: Deploy to GAS
         id: deploy
         run: |
@@ -74,19 +58,3 @@ jobs:
 
           URL="https://script.google.com/macros/s/${{ env.PROD_DEPLOYMENT_ID }}/exec"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
-
-      - name: Set GitHub Deployment Status (success)
-        if: success()
-        run: >
-          gh api repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses
-          -f "state=success"
-          -f "log_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          -f "environment_url=${{ steps.deploy.outputs.url }}"
-
-      - name: Set GitHub Deployment Status (failure)
-        if: failure() || cancelled()
-        run: >
-          gh api repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses
-          -f "state=failure"
-          -f "log_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          -f "environment_url="
