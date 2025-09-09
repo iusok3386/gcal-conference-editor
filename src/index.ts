@@ -13,9 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { hello } from './example-module';
+import {
+  getCalendars,
+  getEvents,
+  updateConferenceData,
+  deleteConferenceData,
+} from './calendar';
 
-console.log(hello());
+declare const global: {
+  [x: string]: unknown;
+};
+
+global.getCalendars = getCalendars;
+global.getEvents = getEvents;
+global.updateConferenceData = updateConferenceData;
+global.deleteConferenceData = deleteConferenceData;
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 function doGet() {
