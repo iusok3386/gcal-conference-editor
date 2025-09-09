@@ -4,29 +4,22 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
 
+permissions:
+  pull-requests: write
+  deployments: write
+
 jobs:
   deploy-preview:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      deployments: write
     environment:
       name: pr-${{ github.event.number }}-preview
-      url: ${{ steps.deploy.outputs.url }}
+      url: ${{ steps.set_final_info.outputs.url }}
     env:
       NODE_VERSION: '22'
       CLASP_RC: ${{ secrets.CLASP_RC }}
       CLASP_JSON: ${{ secrets.CLASP_DEV_JSON }}
     steps:
-      - name: Create deployment status (pending)
-        uses: actions/deployment-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: pr-${{ github.event.number }}-preview
-          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          state: 'in_progress'
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -51,54 +44,74 @@ jobs:
           node deploy-ui.mjs
           npx @google/clasp push -f
 
-      - name: Find existing deployment
-        id: find_deployment
-        run: |
-          DEPLOYMENT_ID=$(npx @google/clasp deployments | grep -E "PR #${{ github.event.pull_request.number }}$" | awk '{print $2}')
-          echo "id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+      - name: Find previous deployment comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
 
-      - name: Deploy to GAS
+      - name: Extract deployment ID from comment
+        id: extract_deployment_id
+        if: steps.find_comment.outputs.comment-id != ''
+        run: |
+          COMMENT_BODY="${{ steps.find_comment.outputs.comment-body }}"
+          if id_line=$(echo "$COMMENT_BODY" | grep '<!-- DEPLOYMENT_ID:'); then
+            deployment_id=$(echo "$id_line" | sed -n 's/.*<!-- DEPLOYMENT_ID: \(.*\) -->.*/\1/p')
+            echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployment_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to GAS (create or update)
         id: deploy
         run: |
-          if [[ -n "${{ steps.find_deployment.outputs.id }}" ]]; then
-            echo "Updating existing deployment: ${{ steps.find_deployment.outputs.id }}"
-            npx @google/clasp deploy -i "${{ steps.find_deployment.outputs.id }}" > deploy_output.txt
+          DEPLOYMENT_ID="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          DESCRIPTION="Preview for PR #${{ github.event.pull_request.number }} - ${SHA_SHORT}"
+
+          if [[ -n "$DEPLOYMENT_ID" ]]; then
+            echo "Updating existing deployment: $DEPLOYMENT_ID"
+            output=$(npx @google/clasp deploy -i "$DEPLOYMENT_ID" -d "$DESCRIPTION")
+            id="$DEPLOYMENT_ID"
           else
-            echo "Creating new deployment for PR #${{ github.event.pull_request.number }}"
-            npx @google/clasp deploy -d "PR #${{ github.event.pull_request.number }}" > deploy_output.txt
+            echo "Creating new deployment"
+            output=$(npx @google/clasp deploy -d "$DESCRIPTION")
+            id=$(echo "$output" | grep -- '^-' | awk '{print $2}')
           fi
-          cat deploy_output.txt
-          URL=$(grep -o 'https://script.google.com/macros/s/.*/exec' deploy_output.txt)
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          if [ -z "$URL" ]; then
-            echo "Failed to get deployment URL"
+
+          echo "Output from clasp: $output"
+          url=$(echo "$output" | grep -o 'https://script.google.com/macros/s/.*/exec')
+
+          if [ -z "$id" ] || [ -z "$url" ]; then
+            echo "Failed to get deployment ID or URL"
             exit 1
           fi
 
-      - name: Update deployment status (success)
-        if: success()
-        uses: actions/deployment-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: pr-${{ github.event.number }}-preview
-          environment_url: ${{ steps.deploy.outputs.url }}
-          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          state: 'success'
+          echo "deployment_id=$id" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
-      - name: Update deployment status (failure)
-        if: failure() || cancelled()
-        uses: actions/deployment-action@v1
+      - name: Create or update comment with deployment URL
+        uses: peter-evans/create-or-update-comment@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: pr-${{ github.event.number }}-preview
-          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          state: 'failure'
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- PREVIEW_DEPLOYMENT_COMMENT -->
+            <!-- DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }} -->
+            🚀 **Preview Deployment Successful!**
+
+            Your changes have been deployed to a preview environment.
+
+            - **URL:** ${{ steps.deploy.outputs.url }}
+
+            *This comment is automatically updated with the latest deployment.*
 
   cleanup-preview:
     if: github.event.action == 'closed'
     runs-on: ubuntu-latest
-    permissions:
-      deployments: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -119,21 +132,29 @@ jobs:
           echo "$CLASP_RC" > ~/.clasprc.json
           echo "$CLASP_JSON" > ./.clasp.json
 
-      - name: Find and Undeploy
-        id: undeploy
+      - name: Find deployment comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
+
+      - name: Undeploy and delete comment
+        if: steps.find_comment.outputs.comment-id != ''
+        env:
+          COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
         run: |
-          DEPLOYMENT_ID=$(npx @google/clasp deployments | grep -E "PR #${{ github.event.pull_request.number }}$" | awk '{print $2}')
-          if [[ -n "$DEPLOYMENT_ID" ]]; then
-            echo "Archiving deployment $DEPLOYMENT_ID for closed PR #${{ github.event.pull_request.number }}"
-            npx @google/clasp undeploy "$DEPLOYMENT_ID"
+          deployment_id=$(echo "$COMMENT_BODY" | sed -n 's/.*<!-- DEPLOYMENT_ID: \(.*\) -->.*/\1/p')
+          if [[ -n "$deployment_id" ]]; then
+            echo "Archiving deployment $deployment_id"
+            npx @google/clasp undeploy "$deployment_id"
           else
-            echo "No deployment found for PR #${{ github.event.pull_request.number }}. Nothing to clean up."
+            echo "Could not find deployment ID in comment."
           fi
 
-      - name: Update deployment status (inactive)
-        uses: actions/deployment-action@v1
+      - name: Delete comment
+        if: steps.find_comment.outputs.comment-id != ''
+        uses: peter-evans/delete-comment@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: pr-${{ github.event.number }}-preview
-          state: 'inactive'
-          latest: false
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}

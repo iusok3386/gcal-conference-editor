@@ -5,11 +5,12 @@ on:
     branches:
       - main
 
+permissions:
+  deployments: write
+
 jobs:
   deploy-production:
     runs-on: ubuntu-latest
-    permissions:
-      deployments: write
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
@@ -18,15 +19,8 @@ jobs:
       CLASP_RC: ${{ secrets.CLASP_RC }}
       CLASP_JSON: ${{ secrets.CLASP_PROD_JSON }}
       PROD_DEPLOYMENT_ID: ${{ secrets.PROD_DEPLOYMENT_ID }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Create deployment status (pending)
-        uses: actions/deployment-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: production
-          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          state: 'in_progress'
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -51,34 +45,47 @@ jobs:
           node deploy-ui.mjs
           npx @google/clasp push -f
 
+      - name: Start GitHub Deployment
+        run: |
+          deployment=$(gh api repos/${{ github.repository }}/deployments \
+            -f "ref=${{ github.ref }}" \
+            -f "environment=production" \
+            -f "required_contexts=[]" \
+            --jq '.id')
+          echo "DEPLOYMENT_ID=$deployment" >> $GITHUB_ENV
+
+      - name: Set GitHub Deployment Status (in_progress)
+        run: >
+          gh api repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses
+          -f "state=in_progress"
+          -f "log_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          -f "environment_url="
+
       - name: Deploy to GAS
         id: deploy
         run: |
           echo "Updating production deployment: ${{ env.PROD_DEPLOYMENT_ID }}"
-          npx @google/clasp deploy -i "${{ env.PROD_DEPLOYMENT_ID }}" -d "Production Deployment" > deploy_output.txt
-          cat deploy_output.txt
-          URL=$(grep -o 'https://script.google.com/macros/s/.*/exec' deploy_output.txt)
+          output=$(npx @google/clasp deploy -i "${{ env.PROD_DEPLOYMENT_ID }}" -d "Production Deployment")
+          echo "Clasp output: $output"
+          URL=$(echo "$output" | grep -o 'https://script.google.com/macros/s/.*/exec')
           echo "url=$URL" >> $GITHUB_OUTPUT
           if [ -z "$URL" ]; then
             echo "Failed to get deployment URL"
             exit 1
           fi
 
-      - name: Update deployment status (success)
+      - name: Set GitHub Deployment Status (success)
         if: success()
-        uses: actions/deployment-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: production
-          environment_url: ${{ steps.deploy.outputs.url }}
-          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          state: 'success'
+        run: >
+          gh api repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses
+          -f "state=success"
+          -f "log_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          -f "environment_url=${{ steps.deploy.outputs.url }}"
 
-      - name: Update deployment status (failure)
+      - name: Set GitHub Deployment Status (failure)
         if: failure() || cancelled()
-        uses: actions/deployment-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: production
-          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          state: 'failure'
+        run: >
+          gh api repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses
+          -f "state=failure"
+          -f "log_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          -f "environment_url="
