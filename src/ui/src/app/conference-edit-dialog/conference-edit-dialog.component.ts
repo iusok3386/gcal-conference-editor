@@ -107,12 +107,6 @@ export class ConferenceEditDialogComponent implements OnInit {
 
   buildConferenceDataFromForm(): GoogleAppsScript.Calendar.Schema.ConferenceData {
     return {
-      createRequest: {
-        requestId: `${Date.now()}`,
-        conferenceSolutionKey: {
-          type: 'addOn',
-        },
-      },
       conferenceId: this.form.value.conferenceId ?? undefined,
       conferenceSolution: {
         name: this.form.value.name ?? '',
