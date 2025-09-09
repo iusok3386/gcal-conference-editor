@@ -1,0 +1,139 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      deployments: write
+    environment:
+      name: pr-${{ github.event.number }}-preview
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      NODE_VERSION: '22'
+      CLASP_RC: ${{ secrets.CLASP_RC }}
+      CLASP_JSON: ${{ secrets.CLASP_DEV_JSON }}
+    steps:
+      - name: Create deployment status (pending)
+        uses: actions/deployment-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: pr-${{ github.event.number }}-preview
+          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          state: 'in_progress'
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup clasp
+        run: |
+          echo "$CLASP_RC" > ~/.clasprc.json
+          echo "$CLASP_JSON" > ./.clasp.json
+
+      - name: Build and Push
+        run: |
+          npm run build
+          ncp appsscript.json dist/appsscript.json
+          npm run build-ui
+          node deploy-ui.mjs
+          npx @google/clasp push -f
+
+      - name: Find existing deployment
+        id: find_deployment
+        run: |
+          DEPLOYMENT_ID=$(npx @google/clasp deployments | grep -E "PR #${{ github.event.pull_request.number }}$" | awk '{print $2}')
+          echo "id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+
+      - name: Deploy to GAS
+        id: deploy
+        run: |
+          if [[ -n "${{ steps.find_deployment.outputs.id }}" ]]; then
+            echo "Updating existing deployment: ${{ steps.find_deployment.outputs.id }}"
+            npx @google/clasp deploy -i "${{ steps.find_deployment.outputs.id }}" > deploy_output.txt
+          else
+            echo "Creating new deployment for PR #${{ github.event.pull_request.number }}"
+            npx @google/clasp deploy -d "PR #${{ github.event.pull_request.number }}" > deploy_output.txt
+          fi
+          cat deploy_output.txt
+          URL=$(grep -o 'https://script.google.com/macros/s/.*/exec' deploy_output.txt)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          if [ -z "$URL" ]; then
+            echo "Failed to get deployment URL"
+            exit 1
+          fi
+
+      - name: Update deployment status (success)
+        if: success()
+        uses: actions/deployment-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: pr-${{ github.event.number }}-preview
+          environment_url: ${{ steps.deploy.outputs.url }}
+          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          state: 'success'
+
+      - name: Update deployment status (failure)
+        if: failure() || cancelled()
+        uses: actions/deployment-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: pr-${{ github.event.number }}-preview
+          log_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          state: 'failure'
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup clasp
+        env:
+          CLASP_RC: ${{ secrets.CLASP_RC }}
+          CLASP_JSON: ${{ secrets.CLASP_DEV_JSON }}
+        run: |
+          echo "$CLASP_RC" > ~/.clasprc.json
+          echo "$CLASP_JSON" > ./.clasp.json
+
+      - name: Find and Undeploy
+        id: undeploy
+        run: |
+          DEPLOYMENT_ID=$(npx @google/clasp deployments | grep -E "PR #${{ github.event.pull_request.number }}$" | awk '{print $2}')
+          if [[ -n "$DEPLOYMENT_ID" ]]; then
+            echo "Archiving deployment $DEPLOYMENT_ID for closed PR #${{ github.event.pull_request.number }}"
+            npx @google/clasp undeploy "$DEPLOYMENT_ID"
+          else
+            echo "No deployment found for PR #${{ github.event.pull_request.number }}. Nothing to clean up."
+          fi
+
+      - name: Update deployment status (inactive)
+        uses: actions/deployment-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: pr-${{ github.event.number }}-preview
+          state: 'inactive'
+          latest: false
