@@ -1,0 +1,167 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  pull-requests: write
+  deployments: write
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    environment:
+      name: pr-${{ github.event.number }}-preview
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      NODE_VERSION: '22'
+      CLASP_RC: ${{ secrets.CLASP_RC }}
+      CLASP_JSON: ${{ vars.CLASP_DEV_JSON }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup clasp
+        run: |
+          echo "$CLASP_RC" > ~/.clasprc.json
+          echo "$CLASP_JSON" > ./.clasp.json
+
+      - name: Build and Push
+        run: |
+          npm run build
+          npx ncp appsscript.json dist/appsscript.json
+          npm run build-ui
+          node deploy-ui.mjs
+          npx @google/clasp push -f
+
+      - name: Find previous deployment comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
+
+      - name: Extract deployment ID from comment
+        id: extract_deployment_id
+        if: steps.find_comment.outputs.comment-id != ''
+        run: |
+          COMMENT_BODY="${{ steps.find_comment.outputs.comment-body }}"
+          if id_line=$(echo "$COMMENT_BODY" | grep '<!-- DEPLOYMENT_ID:'); then
+            deployment_id=$(echo "$id_line" | sed -n 's/.*<!-- DEPLOYMENT_ID: \(.*\) -->.*/\1/p')
+            echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployment_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to GAS (create or update)
+        id: deploy
+        run: |
+          EXISTING_DEPLOYMENT_ID="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          DESCRIPTION="Preview for PR #${{ github.event.pull_request.number }} - ${SHA_SHORT}"
+
+          if [[ -n "$EXISTING_DEPLOYMENT_ID" ]]; then
+            echo "Updating existing deployment: $EXISTING_DEPLOYMENT_ID"
+            output=$(npx @google/clasp deploy -i "$EXISTING_DEPLOYMENT_ID" -d "$DESCRIPTION")
+            final_id="$EXISTING_DEPLOYMENT_ID"
+          else
+            echo "Creating new deployment"
+            output=$(npx @google/clasp deploy -d "$DESCRIPTION")
+            final_id=$(echo "$output" | grep 'Deployed' | awk '{print $2}')
+          fi
+
+          echo "Output from clasp: $output"
+
+          if [ -z "$final_id" ] || ! echo "$output" | grep -q "Deployed"; then
+            echo "Failed to get deployment ID from output."
+            exit 1
+          fi
+
+          url="https://script.google.com/macros/s/$final_id/exec"
+          echo "deployment_id=$final_id" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update comment with deployment URL
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- PREVIEW_DEPLOYMENT_COMMENT -->
+            <!-- DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }} -->
+            🚀 **Preview Deployment Successful!**
+
+            Your changes have been deployed to a preview environment.
+
+            - **URL:** ${{ steps.deploy.outputs.url }}
+
+            *This comment is automatically updated with the latest deployment.*
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Required to delete the comment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup clasp
+        env:
+          CLASP_RC: ${{ secrets.CLASP_RC }}
+          CLASP_JSON: ${{ vars.CLASP_DEV_JSON }}
+        run: |
+          echo "$CLASP_RC" > ~/.clasprc.json
+          echo "$CLASP_JSON" > ./.clasp.json
+
+      - name: Find deployment comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
+
+      - name: Undeploy GAS Deployment
+        if: steps.find_comment.outputs.comment-id != ''
+        env:
+          COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
+        run: |
+          deployment_id=$(echo "$COMMENT_BODY" | sed -n 's/.*<!-- DEPLOYMENT_ID: \(.*\) -->.*/\1/p')
+          if [[ -n "$deployment_id" ]]; then
+            echo "Archiving deployment $deployment_id"
+            npx @google/clasp undeploy "$deployment_id"
+          else
+            echo "Could not find deployment ID in comment."
+          fi
+
+      - name: Delete deployment comment
+        if: steps.find_comment.outputs.comment-id != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ steps.find_comment.outputs.comment-id }}
+            })

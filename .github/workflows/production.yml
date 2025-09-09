@@ -1,0 +1,60 @@
+name: Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  deployments: write
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      NODE_VERSION: '22'
+      CLASP_RC: ${{ secrets.CLASP_RC }}
+      CLASP_JSON: ${{ vars.CLASP_PROD_JSON }}
+      PROD_DEPLOYMENT_ID: ${{ vars.PROD_DEPLOYMENT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup clasp
+        run: |
+          echo "$CLASP_RC" > ~/.clasprc.json
+          echo "$CLASP_JSON" > ./.clasp.json
+
+      - name: Build and Push
+        run: |
+          npm run build
+          npx ncp appsscript.json dist/appsscript.json
+          npm run build-ui
+          node deploy-ui.mjs
+          npx @google/clasp push -f
+
+      - name: Deploy to GAS
+        id: deploy
+        run: |
+          echo "Updating production deployment: ${{ env.PROD_DEPLOYMENT_ID }}"
+          output=$(npx @google/clasp deploy -i "${{ env.PROD_DEPLOYMENT_ID }}" -d "Production Deployment")
+          echo "Clasp output: $output"
+
+          if ! echo "$output" | grep -q "Deployed"; then
+            echo "Deployment failed. Output did not contain 'Deployed'."
+            exit 1
+          fi
+
+          URL="https://script.google.com/macros/s/${{ env.PROD_DEPLOYMENT_ID }}/exec"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
