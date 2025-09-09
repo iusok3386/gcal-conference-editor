@@ -20,14 +20,14 @@ import {
   deleteConferenceData,
 } from './calendar';
 
-declare const global: {
-  [x: string]: unknown;
-};
-
-global.getCalendars = getCalendars;
-global.getEvents = getEvents;
-global.updateConferenceData = updateConferenceData;
-global.deleteConferenceData = deleteConferenceData;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).getCalendars = getCalendars;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).getEvents = getEvents;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).updateConferenceData = updateConferenceData;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).deleteConferenceData = deleteConferenceData;
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 function doGet() {
