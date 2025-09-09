@@ -67,29 +67,29 @@ jobs:
       - name: Deploy to GAS (create or update)
         id: deploy
         run: |
-          DEPLOYMENT_ID="${{ steps.extract_deployment_id.outputs.deployment_id }}"
+          EXISTING_DEPLOYMENT_ID="${{ steps.extract_deployment_id.outputs.deployment_id }}"
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           DESCRIPTION="Preview for PR #${{ github.event.pull_request.number }} - ${SHA_SHORT}"
 
-          if [[ -n "$DEPLOYMENT_ID" ]]; then
-            echo "Updating existing deployment: $DEPLOYMENT_ID"
-            output=$(npx @google/clasp deploy -i "$DEPLOYMENT_ID" -d "$DESCRIPTION")
-            id="$DEPLOYMENT_ID"
+          if [[ -n "$EXISTING_DEPLOYMENT_ID" ]]; then
+            echo "Updating existing deployment: $EXISTING_DEPLOYMENT_ID"
+            output=$(npx @google/clasp deploy -i "$EXISTING_DEPLOYMENT_ID" -d "$DESCRIPTION")
+            final_id="$EXISTING_DEPLOYMENT_ID"
           else
             echo "Creating new deployment"
             output=$(npx @google/clasp deploy -d "$DESCRIPTION")
-            id=$(echo "$output" | grep -- '^-' | awk '{print $2}')
+            final_id=$(echo "$output" | grep 'Deployed' | awk '{print $2}')
           fi
 
           echo "Output from clasp: $output"
-          url=$(echo "$output" | grep -o 'https://script.google.com/macros/s/.*/exec')
 
-          if [ -z "$id" ] || [ -z "$url" ]; then
-            echo "Failed to get deployment ID or URL"
+          if [ -z "$final_id" ] || ! echo "$output" | grep -q "Deployed"; then
+            echo "Failed to get deployment ID from output."
             exit 1
           fi
 
-          echo "deployment_id=$id" >> "$GITHUB_OUTPUT"
+          url="https://script.google.com/macros/s/$final_id/exec"
+          echo "deployment_id=$final_id" >> "$GITHUB_OUTPUT"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Create or update comment with deployment URL

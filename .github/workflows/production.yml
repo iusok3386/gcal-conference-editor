@@ -67,12 +67,14 @@ jobs:
           echo "Updating production deployment: ${{ env.PROD_DEPLOYMENT_ID }}"
           output=$(npx @google/clasp deploy -i "${{ env.PROD_DEPLOYMENT_ID }}" -d "Production Deployment")
           echo "Clasp output: $output"
-          URL=$(echo "$output" | grep -o 'https://script.google.com/macros/s/.*/exec')
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          if [ -z "$URL" ]; then
-            echo "Failed to get deployment URL"
+
+          if ! echo "$output" | grep -q "Deployed"; then
+            echo "Deployment failed. Output did not contain 'Deployed'."
             exit 1
           fi
+
+          URL="https://script.google.com/macros/s/${{ env.PROD_DEPLOYMENT_ID }}/exec"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Set GitHub Deployment Status (success)
         if: success()
