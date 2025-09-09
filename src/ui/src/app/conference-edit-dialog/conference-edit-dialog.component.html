@@ -5,23 +5,59 @@
       <div class="tab-content">
         <mat-form-field>
           <mat-label>Service Name</mat-label>
-          <input matInput formControlName="name" required />
+          <input
+            matInput
+            formControlName="name"
+            required
+            placeholder="e.g., YouTube Live"
+          />
+          <mat-hint
+            >The name of the conference service (e.g., YouTube Live,
+            Discord).</mat-hint
+          >
         </mat-form-field>
         <mat-form-field>
           <mat-label>Service Icon URL</mat-label>
-          <input matInput formControlName="iconUri" />
+          <input
+            matInput
+            formControlName="iconUri"
+            placeholder="e.g., https://example.com/icon.png"
+          />
+          <mat-hint>A URL for the service's icon.</mat-hint>
         </mat-form-field>
         <mat-form-field>
           <mat-label>Entry Point URL</mat-label>
-          <input matInput formControlName="entryPointUri" required />
+          <input
+            matInput
+            formControlName="entryPointUri"
+            required
+            placeholder="e.g., https://www.youtube.com/live/..."
+          />
+          <mat-hint
+            >The main URL for joining the conference.</mat-hint
+          >
         </mat-form-field>
         <mat-form-field>
           <mat-label>Entry Point Label</mat-label>
-          <input matInput formControlName="entryPointLabel" />
+          <input
+            matInput
+            formControlName="entryPointLabel"
+            placeholder="e.g., Stream Title"
+          />
+          <mat-hint
+            >A user-friendly name for the entry point URL.</mat-hint
+          >
         </mat-form-field>
         <mat-form-field>
           <mat-label>Conference ID</mat-label>
-          <input matInput formControlName="conferenceId" />
+          <input
+            matInput
+            formControlName="conferenceId"
+            placeholder="e.g., YouTube Video ID"
+          />
+          <mat-hint
+            >A unique ID for the conference instance.</mat-hint
+          >
         </mat-form-field>
       </div>
     </mat-tab>
