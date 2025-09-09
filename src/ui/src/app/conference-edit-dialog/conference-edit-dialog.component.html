@@ -24,6 +24,14 @@
             placeholder="e.g., https://example.com/icon.png"
           />
           <mat-hint>A URL for the service's icon.</mat-hint>
+          <mat-error *ngIf="form.controls.iconUri.hasError('pattern')"
+            >Invalid URL format (must start with http:// or
+            https://).</mat-error
+          >
+          <mat-error *ngIf="form.controls.iconUri.hasError('invalidIconDomain')"
+            >Warning: This domain may not be supported by Google
+            Calendar.</mat-error
+          >
         </mat-form-field>
         <mat-form-field>
           <mat-label>Entry Point URL</mat-label>
@@ -35,6 +43,10 @@
           />
           <mat-hint
             >The main URL for joining the conference.</mat-hint
+          >
+          <mat-error *ngIf="form.controls.entryPointUri.hasError('pattern')"
+            >Invalid URL format (must start with http:// or
+            https://).</mat-error
           >
         </mat-form-field>
         <mat-form-field>

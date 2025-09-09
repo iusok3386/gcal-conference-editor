@@ -11,12 +11,33 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import {
+  AbstractControl,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
   Validators,
 } from '@angular/forms';
 import { debounceTime, filter } from 'rxjs';
+
+function allowedIconUriDomainValidator(allowedDomains: string[]): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (!control.value) {
+      return null; // Don't validate empty values
+    }
+    try {
+      const url = new URL(control.value);
+      if (allowedDomains.includes(url.hostname)) {
+        return null; // Valid
+      }
+    } catch (e) {
+      // Let the pattern validator handle invalid URLs
+      return null;
+    }
+    return { invalidIconDomain: true }; // Invalid
+  };
+}
 
 @Component({
   selector: 'app-conference-edit-dialog',
@@ -33,14 +54,15 @@ import { debounceTime, filter } from 'rxjs';
   templateUrl: './conference-edit-dialog.component.html',
 })
 export class ConferenceEditDialogComponent implements OnInit {
-  form = new FormGroup({
-    conferenceId: new FormControl(''),
-    name: new FormControl('', Validators.required),
-    iconUri: new FormControl(''),
-    entryPointUri: new FormControl('', Validators.required),
-    entryPointLabel: new FormControl(''),
-    json: new FormControl(''),
-  });
+  allowedIconDomains = [
+    'fonts.gstatic.com',
+    'lh3.googleusercontent.com',
+    'lh4.googleusercontent.com',
+    'lh5.googleusercontent.com',
+    'lh6.googleusercontent.com',
+  ];
+
+  form: FormGroup;
 
   dialogRef = inject(MatDialogRef<ConferenceEditDialogComponent>);
   data: { event: GoogleAppsScript.Calendar.Schema.Event } =
@@ -49,6 +71,21 @@ export class ConferenceEditDialogComponent implements OnInit {
   private isUpdating = false;
 
   constructor() {
+    this.form = new FormGroup({
+      conferenceId: new FormControl(''),
+      name: new FormControl('', Validators.required),
+      iconUri: new FormControl('', [
+        Validators.pattern(/^https?:\/\/.+/),
+        allowedIconUriDomainValidator(this.allowedIconDomains),
+      ]),
+      entryPointUri: new FormControl('', [
+        Validators.required,
+        Validators.pattern(/^https?:\/\/.+/),
+      ]),
+      entryPointLabel: new FormControl(''),
+      json: new FormControl(''),
+    });
+
     if (this.data.event.conferenceData) {
       const conf = this.data.event.conferenceData;
       this.form.patchValue({
