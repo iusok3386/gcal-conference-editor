@@ -112,6 +112,8 @@ jobs:
   cleanup-preview:
     if: github.event.action == 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Required to delete the comment
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -140,7 +142,7 @@ jobs:
           comment-author: 'github-actions[bot]'
           body-includes: '<!-- PREVIEW_DEPLOYMENT_COMMENT -->'
 
-      - name: Undeploy and delete comment
+      - name: Undeploy GAS Deployment
         if: steps.find_comment.outputs.comment-id != ''
         env:
           COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
@@ -153,8 +155,13 @@ jobs:
             echo "Could not find deployment ID in comment."
           fi
 
-      - name: Delete comment
+      - name: Delete deployment comment
         if: steps.find_comment.outputs.comment-id != ''
-        uses: peter-evans/delete-comment@v3
+        uses: actions/github-script@v7
         with:
-          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          script: |
+            github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ steps.find_comment.outputs.comment-id }}
+            })
