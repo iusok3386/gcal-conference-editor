@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pr-${{ github.event.number }}-preview
-      url: ${{ steps.set_final_info.outputs.url }}
+      url: ${{ steps.deploy.outputs.url }}
     env:
       NODE_VERSION: '22'
       CLASP_RC: ${{ secrets.CLASP_RC }}
@@ -39,7 +39,7 @@ jobs:
       - name: Build and Push
         run: |
           npm run build
-          ncp appsscript.json dist/appsscript.json
+          npx ncp appsscript.json dist/appsscript.json
           npm run build-ui
           node deploy-ui.mjs
           npx @google/clasp push -f

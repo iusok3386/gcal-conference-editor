@@ -40,7 +40,7 @@ jobs:
       - name: Build and Push
         run: |
           npm run build
-          ncp appsscript.json dist/appsscript.json
+          npx ncp appsscript.json dist/appsscript.json
           npm run build-ui
           node deploy-ui.mjs
           npx @google/clasp push -f
