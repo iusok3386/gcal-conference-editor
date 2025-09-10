@@ -1,8 +1,7 @@
 name: Update Contribution Badge
 
 on:
-  workflow_dispatch: # Allow manual trigger
-  pull_request:
+  push:
     branches:
       - main
 
@@ -16,7 +15,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
           fetch-depth: 0 # Fetch all history for all branches and tags
 
       - name: Calculate contribution

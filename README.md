@@ -19,7 +19,7 @@ limitations under the License.
 [![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg)](https://github.com/google/gts)
 [![Production Deployment](https://github.com/iusok3386/gcal-conference-editor/actions/workflows/production.yml/badge.svg)](https://github.com/iusok3386/gcal-conference-editor/deployments/production)
 <!-- JULES-BADGE-START -->
-[![Jules's contribution](https://img.shields.io/badge/Jules's%20contribution-73%25-715cd7)](https://github.com/iusok3386/gcal-conference-editor/graphs/contributors)
+![Jules's contribution](https://img.shields.io/badge/Jules's%20contribution-0%25-blue)
 <!-- JULES-BADGE-END -->
 
 このリポジトリは、Google Calendar の予定に含まれる会議情報 (`conferenceData`) を編集するための Web アプリケーションです。
