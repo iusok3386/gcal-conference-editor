@@ -114,16 +114,14 @@ export class ConferenceEditDialogComponent implements OnInit {
   updateJsonFromForm(): void {
     this.isUpdating = true;
     const conferenceData = this.buildConferenceDataFromForm();
-    this.form.controls.json.setValue(
-      JSON.stringify(conferenceData, null, 2)
-    );
+    this.form.get('json')?.setValue(JSON.stringify(conferenceData, null, 2));
     this.isUpdating = false;
   }
 
   updateFormFromJson(): void {
     try {
       this.isUpdating = true;
-      const jsonValue = this.form.controls.json.value;
+      const jsonValue = this.form.get('json')?.value;
       if (jsonValue) {
         const conferenceData: GoogleAppsScript.Calendar.Schema.ConferenceData =
           JSON.parse(jsonValue);
@@ -162,7 +160,7 @@ export class ConferenceEditDialogComponent implements OnInit {
 
   onSave(): void {
     try {
-      const jsonValue = this.form.controls.json.value;
+      const jsonValue = this.form.get('json')?.value;
       if (jsonValue) {
         const conferenceData: GoogleAppsScript.Calendar.Schema.ConferenceData =
           JSON.parse(jsonValue);
