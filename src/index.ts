@@ -13,9 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { hello } from './example-module';
+import {
+  getCalendars,
+  getEvents,
+  updateConferenceData,
+  deleteConferenceData,
+} from './calendar';
 
-console.log(hello());
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).getCalendars = getCalendars;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).getEvents = getEvents;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).updateConferenceData = updateConferenceData;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(this as any).deleteConferenceData = deleteConferenceData;
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 function doGet() {

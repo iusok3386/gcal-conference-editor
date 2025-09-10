@@ -1,7 +1,17 @@
 {
   "timeZone": "Asia/Tokyo",
   "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Calendar",
+        "serviceId": "calendar",
+        "version": "v3"
+      }
+    ]
   },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/calendar"
+  ],
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "webapp": {

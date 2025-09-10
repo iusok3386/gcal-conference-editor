@@ -1,0 +1,15 @@
+<mat-list>
+  <mat-list-item *ngFor="let event of events">
+    <div matListItemTitle>{{ event.summary }}</div>
+    <div matListItemLine>
+      {{ event.start?.dateTime | date : 'short' }}
+    </div>
+    <div matListItemMeta>
+      <button mat-icon-button (click)="onEdit(event)">
+        <mat-icon>edit</mat-icon>
+      </button>
+    </div>
+  </mat-list-item>
+</mat-list>
+
+<p *ngIf="!events || events.length === 0">予定が見つかりませんでした。</p>

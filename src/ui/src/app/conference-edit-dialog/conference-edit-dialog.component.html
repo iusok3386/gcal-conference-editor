@@ -1,0 +1,109 @@
+<h1 mat-dialog-title>
+  {{ data.event.summary }} の会議情報を編集
+</h1>
+<div mat-dialog-content [formGroup]="form">
+  <div *ngIf="isLoading" class="spinner-overlay">
+    <mat-spinner></mat-spinner>
+  </div>
+  <mat-tab-group>
+    <mat-tab label="フォーム">
+      <div class="tab-content">
+        <mat-form-field>
+          <mat-label>サービス名</mat-label>
+          <input
+            matInput
+            formControlName="name"
+            required
+            placeholder="例: YouTube Live"
+          />
+          <mat-hint
+            >会議サービスの名前です。(例: YouTube Live, Discord)</mat-hint
+          >
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>サービスアイコンの URL</mat-label>
+          <input
+            matInput
+            formControlName="iconUri"
+            placeholder="例: https://example.com/icon.png"
+          />
+          <mat-hint>サービスのアイコンの URL です。</mat-hint>
+          <mat-error *ngIf="form.controls['iconUri'].hasError('pattern')"
+            >不正な URL 形式です。(http:// または https://
+            で始まる必要があります)</mat-error
+          >
+          <mat-hint
+            *ngIf="showIconDomainWarning$ | async"
+            class="warning-hint"
+            >注意: このドメインは Google Calendar
+            でサポートされていない可能性があります。</mat-hint
+          >
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>エントリーポイント URL</mat-label>
+          <input
+            matInput
+            formControlName="entryPointUri"
+            required
+            placeholder="例: https://www.youtube.com/live/..."
+          />
+          <mat-hint>会議に参加するためのメイン URL です。</mat-hint>
+          <mat-error *ngIf="form.controls['entryPointUri'].hasError('pattern')"
+            >不正な URL 形式です。(http:// または https://
+            で始まる必要があります)</mat-error
+          >
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>エントリーポイントラベル</mat-label>
+          <input
+            matInput
+            formControlName="entryPointLabel"
+            placeholder="例: 配信タイトル"
+          />
+          <mat-hint>エントリーポイント URL の分かりやすい名前です。</mat-hint>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>会議 ID</mat-label>
+          <input
+            matInput
+            formControlName="conferenceId"
+            placeholder="例: YouTube 動画 ID"
+          />
+          <mat-hint>会議インスタンスの一意な ID です。</mat-hint>
+        </mat-form-field>
+      </div>
+    </mat-tab>
+    <mat-tab label="JSON">
+      <div class="tab-content">
+        <mat-form-field class="json-textarea">
+          <mat-label>ConferenceData JSON</mat-label>
+          <textarea
+            matInput
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            formControlName="json"
+            (input)="updateFormFromJson()"
+          ></textarea>
+        </mat-form-field>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
+<div mat-dialog-actions>
+  <span *ngIf="errorMessage" class="error-message">{{ errorMessage }}</span>
+  <span class="spacer"></span>
+  <button mat-button (click)="onCancel()" [disabled]="isLoading">
+    キャンセル
+  </button>
+  <button mat-button color="warn" (click)="onDelete()" [disabled]="isLoading">
+    会議情報を削除
+  </button>
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="onSave()"
+    [disabled]="!form.valid || isLoading"
+  >
+    保存
+  </button>
+</div>

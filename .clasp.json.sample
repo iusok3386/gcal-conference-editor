@@ -1,0 +1,16 @@
+{
+  "scriptId": "[TODO: スクリプト ID]",
+  "rootDir": "dist",
+  "scriptExtensions": [
+    ".js",
+    ".gs"
+  ],
+  "htmlExtensions": [
+    ".html"
+  ],
+  "jsonExtensions": [
+    ".json"
+  ],
+  "filePushOrder": [],
+  "skipSubdirectories": false
+}

@@ -1,0 +1,8 @@
+<mat-form-field>
+  <mat-label>カレンダーを選択</mat-label>
+  <mat-select (selectionChange)="onSelectionChange($event.value)">
+    <mat-option *ngFor="let calendar of calendars" [value]="calendar.id">
+      {{ calendar.summary }}
+    </mat-option>
+  </mat-select>
+</mat-form-field>

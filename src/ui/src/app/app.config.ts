@@ -18,7 +18,14 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideBrowserGlobalErrorListeners(), provideZonelessChangeDetection()],
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZonelessChangeDetection(),
+    provideAnimations(),
+    provideNativeDateAdapter(),
+  ],
 };
