@@ -1,7 +1,6 @@
 {
   "scriptId": "[TODO: スクリプト ID]",
   "rootDir": "dist",
-  "parentId": "[TODO: 親フォルダの ID]",
   "scriptExtensions": [
     ".js",
     ".gs"

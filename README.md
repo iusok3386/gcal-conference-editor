@@ -73,7 +73,6 @@ npx clasp login
 1.  リポジトリのルートにある `.clasp.json.sample` ファイルをコピーし、`.clasp-dev.json` (開発用) または `.clasp-prod.json` (本番用) という名前で新しいファイルを作成します。
 2.  作成したファイルを開き、`[TODO: ...]` の部分を実際の値に書き換えます。
     - `scriptId`: あなたの Google Apps Script プロジェクトのスクリプト ID を設定します。新しいプロジェクトの場合は、`npx clasp create --type webapp --title "Calendar Conference Editor"` を実行して作成できます。
-    - `parentId`: スクリプトを格納する Google Drive のフォルダ ID を設定します。（任意）
 
 ### 5. デプロイ
 
