@@ -87,6 +87,8 @@ export class AppComponent implements OnInit {
   onEditEvent(event: GoogleAppsScript.Calendar.Schema.Event): void {
     const dialogRef = this.dialog.open(ConferenceEditDialogComponent, {
       data: { event },
+      width: '80vw',
+      maxWidth: '900px',
     });
 
     dialogRef.afterClosed().subscribe(async (result) => {
