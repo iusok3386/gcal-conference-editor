@@ -53,7 +53,7 @@ jobs:
           # Use a marker to replace the badge
           START_MARKER="<!-- JULES-BADGE-START -->"
           END_MARKER="<!-- JULES-BADGE-END -->"
-
+          
           # Replace the content between the markers
           # Using awk for robust replacement
           # The logic is: when start marker is found, print it, print the new content, and set a flag.
