@@ -31,6 +31,7 @@ import { BehaviorSubject, debounceTime, filter } from 'rxjs';
     MatTabsModule,
   ],
   templateUrl: './conference-edit-dialog.component.html',
+  styleUrls: ['./conference-edit-dialog.component.css'],
 })
 export class ConferenceEditDialogComponent implements OnInit {
   allowedIconDomains = [

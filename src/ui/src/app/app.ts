@@ -89,6 +89,7 @@ export class AppComponent implements OnInit {
       data: { event },
       width: '80vw',
       maxWidth: '900px',
+      panelClass: 'full-width-dialog',
     });
 
     dialogRef.afterClosed().subscribe(async (result) => {

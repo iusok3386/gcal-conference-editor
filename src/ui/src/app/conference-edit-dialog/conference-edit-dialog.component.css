@@ -1,0 +1,18 @@
+.tab-content {
+  padding: 16px;
+}
+
+.json-textarea {
+  width: 100%;
+}
+
+.json-textarea textarea {
+  min-height: 200px;
+  font-family: monospace;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.warning-hint {
+  color: orange;
+}
