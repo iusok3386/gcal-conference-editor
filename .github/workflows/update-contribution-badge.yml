@@ -30,8 +30,7 @@ jobs:
           TOTAL_COMMITS=$(git rev-list --count HEAD)
 
           # Get number of commits by Jules
-          # We assume the author name is "Jules". This might need to be adjusted.
-          JULES_COMMITS=$(git log --author="Jules" --oneline | wc -l)
+          JULES_COMMITS=$(git log --author="google-labs-jules[bot]" --oneline | wc -l)
 
           # Calculate percentage
           if [ "$TOTAL_COMMITS" -eq 0 ]; then
@@ -47,26 +46,32 @@ jobs:
       - name: Update README.md
         id: update_readme
         run: |
-          BADGE_URL="https://img.shields.io/badge/Jules's%20contribution-${{ steps.contribution.outputs.percentage }}%25-blue"
+          BADGE_URL="https://img.shields.io/badge/Jules's%20contribution-${{ steps.contribution.outputs.percentage }}%25-715cd7"
           BADGE_MARKDOWN="![Jules's contribution]($BADGE_URL)"
-
-          # Read the current README
-          README_CONTENT=$(cat README.md)
 
           # Use a marker to replace the badge
           START_MARKER="<!-- JULES-BADGE-START -->"
           END_MARKER="<!-- JULES-BADGE-END -->"
 
-          # Construct the new content for the badge section
-          NEW_BADGE_CONTENT="$START_MARKER\n$BADGE_MARKDOWN\n$END_MARKER"
-
           # Replace the content between the markers
           # Using awk for robust replacement
+          # The logic is: when start marker is found, print it, print the new content, and set a flag.
+          # When end marker is found, unset the flag and print the line.
+          # If the flag is not set, print the line.
           NEW_README_CONTENT=$(awk -v start="$START_MARKER" -v end="$END_MARKER" -v new="$BADGE_MARKDOWN" '
-          BEGIN {p=1}
-          $0 == start {print; print new; p=0}
-          $0 == end {p=1}
-          p && $0 != end {print}
+          BEGIN { in_block = 0 }
+          $0 == start {
+            print $0
+            print new
+            in_block = 1
+            next
+          }
+          $0 == end {
+            in_block = 0
+          }
+          in_block == 0 {
+            print $0
+          }
           ' README.md)
 
           # Write the new content back to README.md
