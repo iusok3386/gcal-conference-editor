@@ -10,13 +10,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { BehaviorSubject, debounceTime, filter } from 'rxjs';
+import { BehaviorSubject, debounceTime, filter, finalize, from } from 'rxjs';
+import { GasService } from '../gas.service';
 
 @Component({
   selector: 'app-conference-edit-dialog',
@@ -29,6 +31,7 @@ import { BehaviorSubject, debounceTime, filter } from 'rxjs';
     MatInputModule,
     MatButtonModule,
     MatTabsModule,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './conference-edit-dialog.component.html',
   styleUrls: ['./conference-edit-dialog.component.css'],
@@ -42,12 +45,17 @@ export class ConferenceEditDialogComponent implements OnInit {
     'lh6.googleusercontent.com',
   ];
   showIconDomainWarning$ = new BehaviorSubject<boolean>(false);
+  isLoading = false;
+  errorMessage: string | null = null;
 
   form: FormGroup;
 
+  private readonly gas = inject(GasService);
   dialogRef = inject(MatDialogRef<ConferenceEditDialogComponent>);
-  data: { event: GoogleAppsScript.Calendar.Schema.Event } =
-    inject(MAT_DIALOG_DATA);
+  data: {
+    event: GoogleAppsScript.Calendar.Schema.Event;
+    calendarId: string;
+  } = inject(MAT_DIALOG_DATA);
 
   private isUpdating = false;
 
@@ -132,7 +140,6 @@ export class ConferenceEditDialogComponent implements OnInit {
       }
       this.isUpdating = false;
     } catch (e) {
-      // Invalid JSON, do nothing
       this.isUpdating = false;
     }
   }
@@ -156,25 +163,54 @@ export class ConferenceEditDialogComponent implements OnInit {
   }
 
   onSave(): void {
+    if (!this.form.valid) {
+      return;
+    }
+    this.isLoading = true;
+    this.errorMessage = null;
     try {
       const jsonValue = this.form.get('json')?.value;
-      if (jsonValue) {
+      if (jsonValue && this.data.event.id) {
         const conferenceData: GoogleAppsScript.Calendar.Schema.ConferenceData =
           JSON.parse(jsonValue);
-        this.dialogRef.close(conferenceData);
+        from(
+          this.gas.updateConferenceData(
+            this.data.calendarId,
+            this.data.event.id,
+            conferenceData
+          )
+        )
+          .pipe(finalize(() => (this.isLoading = false)))
+          .subscribe({
+            next: () => this.dialogRef.close(true),
+            error: (err: any) =>
+              (this.errorMessage = `保存に失敗しました: ${err.message}`),
+          });
+      } else {
+        this.isLoading = false;
       }
     } catch (e) {
-      // Should not happen if JSON is kept valid, but as a safeguard.
-      console.error('Invalid JSON in text area', e);
-      // Maybe show an error to the user in a real app
+      this.isLoading = false;
+      this.errorMessage = `JSON の解析に失敗しました: ${
+        e instanceof Error ? e.message : e
+      }`;
     }
   }
 
   onDelete(): void {
-    this.dialogRef.close(null);
+    if (!this.data.event.id) return;
+    this.isLoading = true;
+    this.errorMessage = null;
+    from(this.gas.deleteConferenceData(this.data.calendarId, this.data.event.id))
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: () => this.dialogRef.close(true),
+        error: (err: any) =>
+          (this.errorMessage = `削除に失敗しました: ${err.message}`),
+      });
   }
 
   onCancel(): void {
-    this.dialogRef.close();
+    this.dialogRef.close(false);
   }
 }

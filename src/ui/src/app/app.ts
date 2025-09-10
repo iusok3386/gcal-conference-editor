@@ -23,7 +23,10 @@ import { BehaviorSubject, from, Observable, of, switchMap } from 'rxjs';
 
 import { GasService } from './gas.service';
 import { CalendarSelectorComponent } from './calendar-selector/calendar-selector.component';
-import { EventFilter, EventFilterComponent } from './event-filter/event-filter.component';
+import {
+  EventFilter,
+  EventFilterComponent,
+} from './event-filter/event-filter.component';
 import { EventListComponent } from './event-list/event-list.component';
 import { ConferenceEditDialogComponent } from './conference-edit-dialog/conference-edit-dialog.component';
 
@@ -43,7 +46,9 @@ import { ConferenceEditDialogComponent } from './conference-edit-dialog/conferen
   styleUrl: './app.css',
 })
 export class AppComponent implements OnInit {
-  calendars$: Observable<GoogleAppsScript.Calendar.Schema.CalendarListEntry[]> = of([]);
+  calendars$: Observable<
+    GoogleAppsScript.Calendar.Schema.CalendarListEntry[]
+  > = of([]);
   events$: Observable<GoogleAppsScript.Calendar.Schema.Event[]> = of([]);
 
   selectedCalendarId: string | null = null;
@@ -53,7 +58,7 @@ export class AppComponent implements OnInit {
 
   constructor(
     private readonly gas: GasService,
-    private readonly dialog: MatDialog,
+    private readonly dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -68,10 +73,10 @@ export class AppComponent implements OnInit {
             this.selectedCalendarId,
             trigger.filter.start.toISOString(),
             trigger.filter.end.toISOString(),
-            trigger.filter.query,
-          ),
+            trigger.filter.query
+          )
         );
-      }),
+      })
     );
   }
 
@@ -85,27 +90,20 @@ export class AppComponent implements OnInit {
   }
 
   onEditEvent(event: GoogleAppsScript.Calendar.Schema.Event): void {
+    if (!this.selectedCalendarId) return;
+
     const dialogRef = this.dialog.open(ConferenceEditDialogComponent, {
-      data: { event },
+      data: { event, calendarId: this.selectedCalendarId },
       width: '80vw',
       maxWidth: '900px',
       panelClass: 'full-width-dialog',
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
-      if (result === undefined || !this.selectedCalendarId || !event.id) {
-        return; // Dialog was cancelled
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result === true) {
+        // Refresh the event list on success
+        this.eventSearchTrigger$.next(this.eventSearchTrigger$.value);
       }
-
-      if (result === null) {
-        // Delete conference data
-        await this.gas.deleteConferenceData(this.selectedCalendarId, event.id);
-      } else {
-        // Update conference data
-        await this.gas.updateConferenceData(this.selectedCalendarId, event.id, result);
-      }
-      // Refresh the event list
-      this.eventSearchTrigger$.next(this.eventSearchTrigger$.value);
     });
   }
 }
