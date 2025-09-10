@@ -25,3 +25,7 @@ limitations under the License.
   min-height: 200px;
   font-family: monospace;
 }
+
+.warning-hint {
+  color: orange;
+}

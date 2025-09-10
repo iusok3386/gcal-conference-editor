@@ -28,10 +28,11 @@
             >Invalid URL format (must start with http:// or
             https://).</mat-error
           >
-          <mat-error
-            *ngIf="form.controls['iconUri'].hasError('invalidIconDomain')"
+          <mat-hint
+            *ngIf="showIconDomainWarning$ | async"
+            class="warning-hint"
             >Warning: This domain may not be supported by Google
-            Calendar.</mat-error
+            Calendar.</mat-hint
           >
         </mat-form-field>
         <mat-form-field>

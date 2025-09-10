@@ -11,33 +11,12 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import {
-  AbstractControl,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
-  ValidationErrors,
-  ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { debounceTime, filter } from 'rxjs';
-
-function allowedIconUriDomainValidator(allowedDomains: string[]): ValidatorFn {
-  return (control: AbstractControl): ValidationErrors | null => {
-    if (!control.value) {
-      return null; // Don't validate empty values
-    }
-    try {
-      const url = new URL(control.value);
-      if (allowedDomains.includes(url.hostname)) {
-        return null; // Valid
-      }
-    } catch (e) {
-      // Let the pattern validator handle invalid URLs
-      return null;
-    }
-    return { invalidIconDomain: true }; // Invalid
-  };
-}
+import { BehaviorSubject, debounceTime, filter } from 'rxjs';
 
 @Component({
   selector: 'app-conference-edit-dialog',
@@ -61,6 +40,7 @@ export class ConferenceEditDialogComponent implements OnInit {
     'lh5.googleusercontent.com',
     'lh6.googleusercontent.com',
   ];
+  showIconDomainWarning$ = new BehaviorSubject<boolean>(false);
 
   form: FormGroup;
 
@@ -74,10 +54,7 @@ export class ConferenceEditDialogComponent implements OnInit {
     this.form = new FormGroup({
       conferenceId: new FormControl(''),
       name: new FormControl('', Validators.required),
-      iconUri: new FormControl('', [
-        Validators.pattern(/^https?:\/\/.+/),
-        allowedIconUriDomainValidator(this.allowedIconDomains),
-      ]),
+      iconUri: new FormControl('', [Validators.pattern(/^https?:\/\/.+/)]),
       entryPointUri: new FormControl('', [
         Validators.required,
         Validators.pattern(/^https?:\/\/.+/),
@@ -100,6 +77,11 @@ export class ConferenceEditDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.updateJsonFromForm();
+    this.checkIconDomain(this.form.get('iconUri')?.value);
+
+    this.form
+      .get('iconUri')
+      ?.valueChanges.subscribe((value) => this.checkIconDomain(value));
 
     this.form.valueChanges
       .pipe(
@@ -109,6 +91,20 @@ export class ConferenceEditDialogComponent implements OnInit {
       .subscribe(() => {
         this.updateJsonFromForm();
       });
+  }
+
+  checkIconDomain(value: string | null | undefined): void {
+    if (!value) {
+      this.showIconDomainWarning$.next(false);
+      return;
+    }
+    try {
+      const url = new URL(value);
+      const isAllowed = this.allowedIconDomains.includes(url.hostname);
+      this.showIconDomainWarning$.next(!isAllowed);
+    } catch (e) {
+      this.showIconDomainWarning$.next(false);
+    }
   }
 
   updateJsonFromForm(): void {
