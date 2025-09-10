@@ -30,7 +30,7 @@ jobs:
           TOTAL_COMMITS=$(git rev-list --count HEAD)
 
           # Get number of commits by Jules
-          JULES_COMMITS=$(git log --author="google-labs-jules[bot]" --oneline | wc -l)
+          JULES_COMMITS=$(git log --author="google-labs-jules[bot]" --fixed-strings --oneline | wc -l)
 
           # Calculate percentage
           if [ "$TOTAL_COMMITS" -eq 0 ]; then
@@ -47,7 +47,7 @@ jobs:
         id: update_readme
         run: |
           BADGE_URL="https://img.shields.io/badge/Jules's%20contribution-${{ steps.contribution.outputs.percentage }}%25-715cd7"
-          BADGE_MARKDOWN="![Jules's contribution]($BADGE_URL)"
+          BADGE_MARKDOWN="[![Jules's contribution]($BADGE_URL)](https://github.com/iusok3386/gcal-conference-editor/graphs/contributors)"
 
           # Use a marker to replace the badge
           START_MARKER="<!-- JULES-BADGE-START -->"
