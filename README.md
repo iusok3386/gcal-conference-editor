@@ -15,6 +15,13 @@ limitations under the License.
 -->
 # Google Calendar 会議情報エディター
 
+[![clasp](https://img.shields.io/badge/built%20with-clasp-4285f4.svg)](https://github.com/google/clasp)
+[![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg)](https://github.com/google/gts)
+![Production Deployment](https://github.com/iusok3386/gcal-conference-editor/actions/workflows/production.yml/badge.svg)
+<!-- JULES-BADGE-START -->
+![Jules's contribution](https://img.shields.io/badge/Jules's%20contribution-0%25-blue)
+<!-- JULES-BADGE-END -->
+
 このリポジトリは、Google Calendar の予定に含まれる会議情報 (`conferenceData`) を編集するための Web アプリケーションです。
 Google Meet 以外の任意の会議情報（例: YouTube Live, Discord）をカレンダーの予定に簡単に追加、編集、削除することができます。
 

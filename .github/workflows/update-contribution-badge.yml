@@ -1,0 +1,87 @@
+name: Update Contribution Badge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-badge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Allow to push to the repository
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags
+
+      - name: Calculate contribution
+        id: contribution
+        run: |
+          # Configure git to use the bot's identity
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Get total number of commits
+          TOTAL_COMMITS=$(git rev-list --count HEAD)
+
+          # Get number of commits by Jules
+          # We assume the author name is "Jules". This might need to be adjusted.
+          JULES_COMMITS=$(git log --author="Jules" --oneline | wc -l)
+
+          # Calculate percentage
+          if [ "$TOTAL_COMMITS" -eq 0 ]; then
+            PERCENTAGE=0
+          else
+            PERCENTAGE=$((JULES_COMMITS * 100 / TOTAL_COMMITS))
+          fi
+          echo "Total commits: $TOTAL_COMMITS"
+          echo "Jules's commits: $JULES_COMMITS"
+          echo "Contribution: $PERCENTAGE%"
+          echo "percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
+
+      - name: Update README.md
+        id: update_readme
+        run: |
+          BADGE_URL="https://img.shields.io/badge/Jules's%20contribution-${{ steps.contribution.outputs.percentage }}%25-blue"
+          BADGE_MARKDOWN="![Jules's contribution]($BADGE_URL)"
+
+          # Read the current README
+          README_CONTENT=$(cat README.md)
+
+          # Use a marker to replace the badge
+          START_MARKER="<!-- JULES-BADGE-START -->"
+          END_MARKER="<!-- JULES-BADGE-END -->"
+
+          # Construct the new content for the badge section
+          NEW_BADGE_CONTENT="$START_MARKER\n$BADGE_MARKDOWN\n$END_MARKER"
+
+          # Replace the content between the markers
+          # Using awk for robust replacement
+          NEW_README_CONTENT=$(awk -v start="$START_MARKER" -v end="$END_MARKER" -v new="$BADGE_MARKDOWN" '
+          BEGIN {p=1}
+          $0 == start {print; print new; p=0}
+          $0 == end {p=1}
+          p && $0 != end {print}
+          ' README.md)
+
+          # Write the new content back to README.md
+          echo "$NEW_README_CONTENT" > README.md
+
+          # Check if the file was changed
+          if git diff --quiet README.md; then
+            echo "readme_changed=false" >> $GITHUB_OUTPUT
+            echo "README.md not changed."
+          else
+            echo "readme_changed=true" >> $GITHUB_OUTPUT
+            echo "README.md changed."
+          fi
+
+      - name: Commit changes
+        if: steps.update_readme.outputs.readme_changed == 'true'
+        run: |
+          git add README.md
+          git commit -m "docs: update Jules's contribution badge [skip ci]"
+          git push
